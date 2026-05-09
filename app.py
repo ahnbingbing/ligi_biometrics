@@ -213,6 +213,18 @@ def apply_compact_styles() -> None:
             div[data-testid="stHorizontalBlock"] {
                 gap: clamp(0.08rem, 1vw, 0.16rem) !important;
             }
+            div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1) {
+                flex: 0 0 43% !important;
+                width: 43% !important;
+            }
+            div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) {
+                flex: 0 0 28% !important;
+                width: 28% !important;
+            }
+            div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3) {
+                flex: 0 0 26% !important;
+                width: 26% !important;
+            }
             div[data-testid="stTextInput"] {
                 margin: 0;
             }
