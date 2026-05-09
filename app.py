@@ -27,9 +27,9 @@ def apply_compact_styles() -> None:
         """
         <style>
         .block-container {
-            padding-top: 8rem;
+            padding-top: clamp(7.2rem, 12vh, 8.6rem);
             padding-bottom: 1rem;
-            max-width: 720px;
+            max-width: min(94vw, 900px);
         }
         h2, h3 {
             font-size: 1rem !important;
@@ -37,13 +37,13 @@ def apply_compact_styles() -> None:
         }
         .app-header {
             position: fixed;
-            top: 3rem;
+            top: clamp(2.4rem, 5.6vh, 3.5rem);
             left: 50%;
             transform: translateX(-50%);
-            width: min(720px, calc(100vw - 1rem));
+            width: min(94vw, 900px);
             z-index: 999;
             margin: 0;
-            padding: 0.7rem 0.4rem 0.66rem;
+            padding: clamp(0.48rem, 1.2vh, 0.78rem) clamp(0.45rem, 1.4vw, 0.85rem) 0.62rem;
             background: linear-gradient(
                 to bottom,
                 var(--background-color) 0%,
@@ -54,12 +54,12 @@ def apply_compact_styles() -> None:
         }
         .app-title {
             color: #ffffff !important;
-            font-size: 2rem;
+            font-size: clamp(1.72rem, 4.2vw, 2.35rem);
             font-weight: 860;
             line-height: 1.08;
             letter-spacing: 0;
             display: block;
-            min-height: 2.4rem;
+            min-height: clamp(1.9rem, 5vw, 2.55rem);
         }
         .date-card {
             display: block;
@@ -69,19 +69,19 @@ def apply_compact_styles() -> None:
             background: transparent;
             border: 0;
             box-shadow: none;
-            font-size: 1.08rem;
+            font-size: clamp(0.95rem, 2.3vw, 1.2rem);
             font-weight: 820;
         }
         .date-label {
             color: rgba(255, 255, 255, 0.68) !important;
-            font-size: 0.9rem;
+            font-size: clamp(0.74rem, 1.8vw, 0.92rem);
             font-weight: 760;
             margin-right: 0.5rem;
         }
         div[data-testid="stForm"] {
             border: 1px solid rgba(255, 255, 255, 0.42);
             border-radius: 1.25rem;
-            padding: 0.8rem 0.8rem 0.95rem;
+            padding: clamp(0.48rem, 1.4vw, 0.9rem);
             background: color-mix(in srgb, var(--background-color) 86%, var(--secondary-background-color) 14%);
             box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
         }
@@ -94,8 +94,8 @@ def apply_compact_styles() -> None:
         }
         div[data-testid="stHorizontalBlock"] {
             display: grid !important;
-            grid-template-columns: minmax(9.2rem, 1.28fr) minmax(6rem, 0.72fr) minmax(6.3rem, 0.78fr) !important;
-            gap: 0.45rem !important;
+            grid-template-columns: minmax(0, 1.22fr) minmax(0, 0.58fr) minmax(0, 0.72fr) !important;
+            gap: clamp(0.16rem, 1.2vw, 0.55rem) !important;
             align-items: center !important;
             width: 100%;
         }
@@ -120,8 +120,8 @@ def apply_compact_styles() -> None:
         div[data-testid="stTextInput"] input {
             height: 2.55rem;
             width: 100%;
-            padding: 0.25rem 0.55rem;
-            font-size: 1.08rem;
+            padding: 0.25rem clamp(0.32rem, 1vw, 0.62rem);
+            font-size: clamp(0.92rem, 1.9vw, 1.12rem);
             font-weight: 700;
             border: 2px solid #d1d5db;
             border-radius: 0.85rem;
@@ -138,7 +138,7 @@ def apply_compact_styles() -> None:
             min-height: 2.55rem;
             display: flex;
             align-items: center;
-            font-size: 1.08rem;
+            font-size: clamp(0.86rem, 1.9vw, 1.12rem);
             font-weight: 760;
             line-height: 1.16;
             color: var(--text-color);
@@ -159,7 +159,7 @@ def apply_compact_styles() -> None:
             background: color-mix(in srgb, var(--secondary-background-color) 88%, #7aa7ff 12%);
             border: 1px solid rgba(255, 255, 255, 0.42);
             font-weight: 700;
-            font-size: 0.88rem;
+            font-size: clamp(0.68rem, 1.55vw, 0.92rem);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -177,33 +177,33 @@ def apply_compact_styles() -> None:
         }
         @media (max-width: 640px) {
             .block-container {
-                padding-top: 8.2rem;
-                padding-left: 0.25rem;
-                padding-right: 0.25rem;
+                padding-top: clamp(7rem, 12.5vh, 8.6rem);
+                padding-left: 0.22rem;
+                padding-right: 0.22rem;
                 max-width: 100%;
             }
             .app-header {
-                top: 3.7rem;
+                top: clamp(3rem, 6.5vh, 4.1rem);
                 width: 100vw;
-                padding: 0.7rem 0.8rem 0.64rem;
+                padding: 0.62rem 0.65rem 0.58rem;
             }
             .app-title {
-                font-size: 1.95rem;
-                min-height: 2.1rem;
+                font-size: clamp(1.62rem, 7vw, 2.05rem);
+                min-height: clamp(1.8rem, 7.5vw, 2.18rem);
             }
             .date-card {
-                font-size: 1.08rem;
+                font-size: clamp(0.94rem, 4vw, 1.1rem);
             }
             .date-label {
-                font-size: 0.86rem;
+                font-size: clamp(0.72rem, 3.2vw, 0.88rem);
             }
             div[data-testid="stForm"] {
                 padding: 0.48rem 0.3rem 0.85rem;
                 border-radius: 1rem;
             }
             div[data-testid="stHorizontalBlock"] {
-                grid-template-columns: minmax(6.15rem, 1.18fr) minmax(4.25rem, 0.62fr) minmax(4.15rem, 0.58fr) !important;
-                gap: 0.12rem !important;
+                grid-template-columns: minmax(0, 1.16fr) minmax(0, 0.58fr) minmax(0, 0.58fr) !important;
+                gap: clamp(0.08rem, 1vw, 0.16rem) !important;
             }
             div[data-testid="stTextInput"] {
                 margin: 0;
@@ -211,7 +211,7 @@ def apply_compact_styles() -> None:
             div[data-testid="stNumberInput"] input,
             div[data-testid="stTextInput"] input {
                 height: 2.25rem;
-                font-size: 1rem;
+                font-size: clamp(0.82rem, 3.8vw, 1rem);
                 padding-left: 0.34rem;
                 padding-right: 0.34rem;
                 border-radius: 0.62rem;
@@ -222,11 +222,11 @@ def apply_compact_styles() -> None:
                 min-height: 2.25rem;
             }
             .field-label {
-                font-size: 0.98rem;
+                font-size: clamp(0.78rem, 3.8vw, 1rem);
                 line-height: 1.06;
             }
             .prev-value {
-                font-size: 0.78rem;
+                font-size: clamp(0.6rem, 3vw, 0.78rem);
                 padding: 0.13rem 0.22rem;
             }
             .field-divider {
