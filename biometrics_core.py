@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import base64
+import io
 import json
 import os
 from datetime import date
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -18,6 +22,7 @@ ORIGIN_CSV_PATH = DATA_DIR / "biometrics_origin.csv"
 METADATA_PATH = DATA_DIR / "metadata.json"
 TODAY_REMINDER_PATH = DATA_DIR / "today_reminder.txt"
 LATEST_ANALYSIS_PATH = DATA_DIR / "latest_analysis.md"
+GITHUB_API_URL = "https://api.github.com"
 
 DATE_COLUMN = "date"
 FIELD_ORDER = [
@@ -171,6 +176,101 @@ def load_csv(path: Path) -> pd.DataFrame:
     return normalize_dataframe(pd.read_csv(path))
 
 
+def load_environment() -> None:
+    load_dotenv(BASE_DIR / ".env")
+
+
+def github_storage_enabled() -> bool:
+    load_environment()
+    return bool(os.getenv("GITHUB_TOKEN") and os.getenv("GITHUB_REPO"))
+
+
+def github_repo() -> str:
+    return os.getenv("GITHUB_REPO", "ahnbingbing/ligi_biometrics")
+
+
+def github_branch() -> str:
+    return os.getenv("GITHUB_BRANCH", "main")
+
+
+def github_csv_path() -> str:
+    return os.getenv("GITHUB_CSV_PATH", "data/biometrics.csv")
+
+
+def github_request(method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    token = os.getenv("GITHUB_TOKEN")
+    if not token:
+        raise RuntimeError("GITHUB_TOKEN is not configured.")
+
+    data = None
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "User-Agent": "ligi-biometrics",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+
+    request = Request(f"{GITHUB_API_URL}{path}", data=data, headers=headers, method=method)
+    try:
+        with urlopen(request, timeout=20) as response:
+            body = response.read().decode("utf-8")
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"GitHub API error {exc.code}: {details}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"GitHub API connection error: {exc}") from exc
+
+    return json.loads(body) if body else {}
+
+
+def github_contents_path() -> str:
+    return f"/repos/{github_repo()}/contents/{github_csv_path()}"
+
+
+def load_github_csv() -> pd.DataFrame | None:
+    if not github_storage_enabled():
+        return None
+
+    path = f"{github_contents_path()}?ref={github_branch()}"
+    response = github_request("GET", path)
+
+    encoded_content = response.get("content", "")
+    if not encoded_content:
+        return create_empty_dataframe()
+    csv_bytes = base64.b64decode(encoded_content)
+    return normalize_dataframe(pd.read_csv(io.BytesIO(csv_bytes)))
+
+
+def save_github_csv(df: pd.DataFrame) -> bool:
+    if not github_storage_enabled():
+        return False
+
+    output = normalize_dataframe(df)
+    csv_text = output.to_csv(index=False)
+    encoded_content = base64.b64encode(csv_text.encode("utf-8")).decode("utf-8")
+
+    sha = None
+    try:
+        response = github_request("GET", f"{github_contents_path()}?ref={github_branch()}")
+        sha = response.get("sha")
+    except RuntimeError:
+        sha = None
+
+    payload: dict[str, Any] = {
+        "message": f"Update biometrics data {date.today().isoformat()}",
+        "content": encoded_content,
+        "branch": github_branch(),
+    }
+    if sha:
+        payload["sha"] = sha
+
+    github_request("PUT", github_contents_path(), payload)
+    return True
+
+
 def migrate_origin_data(df: pd.DataFrame) -> pd.DataFrame:
     if not ORIGIN_CSV_PATH.exists():
         return df
@@ -187,6 +287,11 @@ def migrate_origin_data(df: pd.DataFrame) -> pd.DataFrame:
 
 def load_data() -> pd.DataFrame:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    github_df = load_github_csv()
+    if github_df is not None:
+        github_df.to_csv(CSV_PATH, index=False)
+        return github_df
+
     if not CSV_PATH.exists():
         df = migrate_origin_data(create_empty_dataframe())
         save_data(df)
@@ -201,6 +306,7 @@ def save_data(df: pd.DataFrame) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     output = normalize_dataframe(df)
     output.to_csv(CSV_PATH, index=False)
+    save_github_csv(output)
 
 
 def clean_row(row: dict[str, Any] | None) -> dict[str, Any]:
@@ -271,7 +377,7 @@ def recent_rows_for_prompt(df: pd.DataFrame, limit: int = 14) -> list[dict[str, 
 
 
 def openai_client() -> OpenAI | None:
-    load_dotenv(BASE_DIR / ".env")
+    load_environment()
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return None

@@ -16,6 +16,10 @@ Add your API key to `.env`:
 ```bash
 OPENAI_API_KEY=your_api_key_here
 OPENAI_MODEL=gpt-4.1-mini
+GITHUB_TOKEN=your_github_token_here
+GITHUB_REPO=ahnbingbing/ligi_biometrics
+GITHUB_BRANCH=main
+GITHUB_CSV_PATH=data/biometrics.csv
 ```
 
 ## Run
@@ -24,7 +28,7 @@ OPENAI_MODEL=gpt-4.1-mini
 streamlit run app.py
 ```
 
-The app stores data in `data/biometrics.csv` and reads form settings from `data/metadata.json`.
+The app stores data in `data/biometrics.csv`, reads form settings from `data/metadata.json`, and can sync CSV changes back to GitHub when `GITHUB_TOKEN` is configured.
 
 ## Batch Scripts
 
@@ -46,6 +50,7 @@ Use `python batch_reminder.py --no-save` to print without writing a file.
 - Pre-fills today's fields with today's saved row, or the latest previous row when today has no row
 - Shows the latest previous value and Korean anchor guidance beside each field
 - Upserts today's row by date
+- Syncs `data/biometrics.csv` to GitHub when GitHub storage secrets are configured
 - Migrates rows from `data/biometrics_origin.csv` into `data/biometrics.csv` when present, keeping current CSV rows for duplicate dates
 - Sends today's row, the latest previous row, and recent 14 rows to the OpenAI API
 - Displays Korean analysis and local trend charts
