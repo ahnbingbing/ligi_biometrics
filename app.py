@@ -5,6 +5,7 @@ from typing import Any
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 from biometrics_core import (
     DATE_COLUMN,
@@ -26,7 +27,7 @@ def apply_compact_styles() -> None:
         """
         <style>
         .block-container {
-            padding-top: 1.15rem;
+            padding-top: 5.9rem;
             padding-bottom: 1rem;
             max-width: 720px;
         }
@@ -35,21 +36,25 @@ def apply_compact_styles() -> None:
             margin-top: 0.8rem !important;
         }
         .app-header {
-            position: sticky;
+            position: fixed;
             top: 0;
-            z-index: 20;
-            margin-bottom: 0.9rem;
-            padding: 0.1rem 0.05rem 0.65rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(720px, calc(100vw - 1rem));
+            z-index: 999;
+            margin: 0;
+            padding: 0.7rem 0.4rem 0.62rem;
             background: linear-gradient(
                 to bottom,
                 var(--background-color) 0%,
-                var(--background-color) 72%,
+                var(--background-color) 82%,
                 color-mix(in srgb, var(--background-color) 0%, transparent) 100%
             );
+            border-bottom: 1px solid rgba(255, 255, 255, 0.26);
         }
         .app-title {
             color: #ffffff !important;
-            font-size: 2.2rem;
+            font-size: 2rem;
             font-weight: 860;
             line-height: 1.08;
             letter-spacing: 0;
@@ -58,13 +63,13 @@ def apply_compact_styles() -> None:
         }
         .date-card {
             display: block;
-            margin-top: 0.42rem;
+            margin-top: 0.28rem;
             padding: 0;
             color: #ffffff !important;
             background: transparent;
             border: 0;
             box-shadow: none;
-            font-size: 1.18rem;
+            font-size: 1.08rem;
             font-weight: 820;
         }
         .date-label {
@@ -87,6 +92,18 @@ def apply_compact_styles() -> None:
             padding-left: 0.12rem !important;
             padding-right: 0.12rem !important;
         }
+        div[data-testid="stHorizontalBlock"] {
+            display: grid !important;
+            grid-template-columns: minmax(8.8rem, 1.05fr) minmax(8.6rem, 1.18fr) minmax(5.4rem, 0.76fr) !important;
+            gap: 0.45rem !important;
+            align-items: center !important;
+            width: 100%;
+        }
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+            width: auto !important;
+            min-width: 0 !important;
+            flex: none !important;
+        }
         div[data-testid="stTextInput"] {
             margin: 0;
         }
@@ -101,10 +118,10 @@ def apply_compact_styles() -> None:
         }
         div[data-testid="stNumberInput"] input,
         div[data-testid="stTextInput"] input {
-            height: 2.45rem;
+            height: 2.55rem;
             width: 100%;
-            padding: 0.25rem 0.6rem;
-            font-size: 0.94rem;
+            padding: 0.25rem 0.72rem;
+            font-size: 1.02rem;
             font-weight: 700;
             border: 1px solid #e1e6ee;
             border-radius: 0.85rem;
@@ -117,21 +134,18 @@ def apply_compact_styles() -> None:
             border-color: #8ab4ff;
             box-shadow: 0 0 0 3px rgba(79, 139, 255, 0.18);
         }
-        div[data-testid="stHorizontalBlock"] {
-            align-items: center;
-        }
         .field-label {
-            min-height: 2.45rem;
+            min-height: 2.55rem;
             display: flex;
             align-items: center;
-            font-size: 0.9rem;
+            font-size: 1rem;
             font-weight: 760;
             line-height: 1.16;
             color: var(--text-color);
             word-break: keep-all;
         }
         .field-prev {
-            min-height: 2.45rem;
+            min-height: 2.55rem;
             display: flex;
             align-items: center;
             min-width: 0;
@@ -139,13 +153,13 @@ def apply_compact_styles() -> None:
         .prev-value {
             display: inline-block;
             max-width: 100%;
-            padding: 0.22rem 0.52rem;
+            padding: 0.24rem 0.52rem;
             border-radius: 999px;
             color: var(--text-color);
             background: color-mix(in srgb, var(--secondary-background-color) 88%, #7aa7ff 12%);
             border: 1px solid rgba(255, 255, 255, 0.42);
             font-weight: 700;
-            font-size: 0.72rem;
+            font-size: 0.78rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -163,25 +177,32 @@ def apply_compact_styles() -> None:
         }
         @media (max-width: 640px) {
             .block-container {
-                padding-left: 0.45rem;
-                padding-right: 0.45rem;
+                padding-top: 5.35rem;
+                padding-left: 0.35rem;
+                padding-right: 0.35rem;
+                max-width: 100%;
+            }
+            .app-header {
+                width: 100vw;
+                padding: 0.64rem 0.7rem 0.58rem;
             }
             .app-title {
-                font-size: 1.85rem;
-                min-height: 2rem;
+                font-size: 1.72rem;
+                min-height: 1.9rem;
             }
             .date-card {
-                font-size: 1rem;
+                font-size: 0.98rem;
             }
             .date-label {
                 font-size: 0.78rem;
             }
             div[data-testid="stForm"] {
-                padding: 0.65rem 0.55rem 0.85rem;
+                padding: 0.52rem 0.45rem 0.85rem;
                 border-radius: 1rem;
             }
             div[data-testid="stHorizontalBlock"] {
-                gap: 0.12rem;
+                grid-template-columns: minmax(4.8rem, 0.92fr) minmax(5.2rem, 1.08fr) minmax(3.7rem, 0.68fr) !important;
+                gap: 0.18rem !important;
             }
             div[data-testid="stTextInput"] {
                 margin: 0;
@@ -189,22 +210,25 @@ def apply_compact_styles() -> None:
             div[data-testid="stNumberInput"] input,
             div[data-testid="stTextInput"] input {
                 height: 2.25rem;
-                font-size: 0.86rem;
-                padding-left: 0.45rem;
-                padding-right: 0.45rem;
-                border-radius: 0.72rem;
+                font-size: 0.9rem;
+                padding-left: 0.42rem;
+                padding-right: 0.42rem;
+                border-radius: 0.66rem;
             }
             .field-label,
             .field-prev {
                 min-height: 2.25rem;
             }
             .field-label {
-                font-size: 0.72rem;
-                line-height: 1.1;
+                font-size: 0.84rem;
+                line-height: 1.08;
             }
             .prev-value {
-                font-size: 0.6rem;
-                padding: 0.14rem 0.28rem;
+                font-size: 0.66rem;
+                padding: 0.13rem 0.25rem;
+            }
+            .field-divider {
+                margin: 0.02rem 0;
             }
         }
         </style>
@@ -222,6 +246,31 @@ def render_header(today_iso: str) -> None:
         </div>
         """,
         unsafe_allow_html=True,
+    )
+
+
+def install_input_select_script() -> None:
+    components.html(
+        """
+        <script>
+        const attachSelectOnFocus = () => {
+            const doc = window.parent.document;
+            doc.querySelectorAll('input').forEach((input) => {
+                if (input.dataset.ligiSelectAttached === 'true') return;
+                input.dataset.ligiSelectAttached = 'true';
+                input.addEventListener('focus', () => {
+                    window.setTimeout(() => input.select(), 0);
+                });
+                input.addEventListener('mouseup', (event) => {
+                    event.preventDefault();
+                });
+            });
+        };
+        attachSelectOnFocus();
+        window.setInterval(attachSelectOnFocus, 1000);
+        </script>
+        """,
+        height=0,
     )
 
 
@@ -362,6 +411,7 @@ def render_charts(df: pd.DataFrame) -> None:
 def main() -> None:
     st.set_page_config(page_title="Ligi Biometrics", page_icon="LB", layout="wide")
     apply_compact_styles()
+    install_input_select_script()
 
     metadata = load_metadata()
     df = load_data()
