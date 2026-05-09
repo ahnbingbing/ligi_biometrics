@@ -7,3 +7,9 @@ __pycache__/
 data/biometrics_origin.csv
 data/today_reminder.txt
 data/latest_analysis.md
+
+# Sheets backend secrets — never commit
+.streamlit/secrets.toml
+service_account*.json
+*-service-account.json
+data/credentials*.json
