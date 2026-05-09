@@ -27,39 +27,36 @@ def apply_compact_styles() -> None:
         """
         <style>
         .block-container {
-            padding-top: clamp(7.2rem, 12vh, 8.6rem);
+            padding-top: 1.4rem;
             padding-bottom: 1rem;
-            max-width: min(94vw, 900px);
+            max-width: min(94vw, 820px);
         }
         h2, h3 {
             font-size: 1rem !important;
             margin-top: 0.8rem !important;
         }
         .app-header {
-            position: fixed;
-            top: clamp(2.4rem, 5.6vh, 3.5rem);
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(94vw, 900px);
-            z-index: 999;
-            margin: 0;
-            padding: clamp(0.48rem, 1.2vh, 0.78rem) clamp(0.45rem, 1.4vw, 0.85rem) 0.62rem;
+            position: sticky;
+            top: 3.25rem;
+            z-index: 20;
+            margin: 0 0 1rem;
+            padding: 0.55rem 0 0.75rem;
             background: linear-gradient(
                 to bottom,
                 var(--background-color) 0%,
-                var(--background-color) 82%,
+                var(--background-color) 84%,
                 color-mix(in srgb, var(--background-color) 0%, transparent) 100%
             );
             border-bottom: 1px solid rgba(255, 255, 255, 0.26);
         }
         .app-title {
             color: #ffffff !important;
-            font-size: clamp(1.72rem, 4.2vw, 2.35rem);
+            font-size: clamp(2rem, 4vw, 2.75rem);
             font-weight: 860;
             line-height: 1.08;
             letter-spacing: 0;
             display: block;
-            min-height: clamp(1.9rem, 5vw, 2.55rem);
+            min-height: auto;
         }
         .date-card {
             display: block;
@@ -69,19 +66,19 @@ def apply_compact_styles() -> None:
             background: transparent;
             border: 0;
             box-shadow: none;
-            font-size: clamp(0.95rem, 2.3vw, 1.2rem);
+            font-size: clamp(1rem, 2vw, 1.22rem);
             font-weight: 820;
         }
         .date-label {
             color: rgba(255, 255, 255, 0.68) !important;
-            font-size: clamp(0.74rem, 1.8vw, 0.92rem);
+            font-size: clamp(0.8rem, 1.5vw, 0.95rem);
             font-weight: 760;
             margin-right: 0.5rem;
         }
         div[data-testid="stForm"] {
             border: 1px solid rgba(255, 255, 255, 0.42);
             border-radius: 1.25rem;
-            padding: clamp(0.48rem, 1.4vw, 0.9rem);
+            padding: clamp(0.5rem, 1.2vw, 0.85rem);
             background: color-mix(in srgb, var(--background-color) 86%, var(--secondary-background-color) 14%);
             box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
         }
@@ -93,35 +90,20 @@ def apply_compact_styles() -> None:
             padding-right: 0.12rem !important;
         }
         div[data-testid="stHorizontalBlock"] {
-            display: grid !important;
-            grid-template-columns: minmax(0, 1.22fr) minmax(0, 0.58fr) minmax(0, 0.72fr) !important;
-            gap: clamp(0.16rem, 1.2vw, 0.55rem) !important;
-            align-items: center !important;
-            width: 100%;
+            flex-wrap: nowrap !important;
+            gap: clamp(0.12rem, 1vw, 0.45rem) !important;
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-            width: auto !important;
             min-width: 0 !important;
-            flex: none !important;
         }
         div[data-testid="stTextInput"] {
             margin: 0;
         }
-        div[data-testid="stNumberInput"] {
-            margin: 0;
-        }
-        div[data-testid="stNumberInput"] > div {
-            width: 100%;
-        }
-        div[data-testid="stNumberInput"] button {
-            display: none;
-        }
-        div[data-testid="stNumberInput"] input,
         div[data-testid="stTextInput"] input {
-            height: 2.55rem;
+            height: 2.5rem;
             width: 100%;
-            padding: 0.25rem clamp(0.32rem, 1vw, 0.62rem);
-            font-size: clamp(0.92rem, 1.9vw, 1.12rem);
+            padding: 0.25rem 0.58rem;
+            font-size: clamp(1rem, 1.6vw, 1.14rem);
             font-weight: 700;
             border: 2px solid #d1d5db;
             border-radius: 0.85rem;
@@ -129,23 +111,22 @@ def apply_compact_styles() -> None:
             background: #ffffff !important;
             box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.8);
         }
-        div[data-testid="stNumberInput"] input:focus,
         div[data-testid="stTextInput"] input:focus {
             border-color: #8f98a3;
             box-shadow: 0 0 0 2px rgba(143, 152, 163, 0.28);
         }
         .field-label {
-            min-height: 2.55rem;
+            min-height: 2.5rem;
             display: flex;
             align-items: center;
-            font-size: clamp(0.86rem, 1.9vw, 1.12rem);
+            font-size: clamp(1rem, 1.8vw, 1.18rem);
             font-weight: 760;
             line-height: 1.16;
             color: var(--text-color);
             word-break: keep-all;
         }
         .field-prev {
-            min-height: 2.55rem;
+            min-height: 2.5rem;
             display: flex;
             align-items: center;
             min-width: 0;
@@ -159,7 +140,7 @@ def apply_compact_styles() -> None:
             background: color-mix(in srgb, var(--secondary-background-color) 88%, #7aa7ff 12%);
             border: 1px solid rgba(255, 255, 255, 0.42);
             font-weight: 700;
-            font-size: clamp(0.68rem, 1.55vw, 0.92rem);
+            font-size: clamp(0.78rem, 1.45vw, 0.98rem);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -177,22 +158,20 @@ def apply_compact_styles() -> None:
         }
         @media (max-width: 640px) {
             .block-container {
-                padding-top: clamp(7rem, 12.5vh, 8.6rem);
-                padding-left: 0.22rem;
-                padding-right: 0.22rem;
+                padding-top: 1rem;
+                padding-left: 0.28rem;
+                padding-right: 0.28rem;
                 max-width: 100%;
             }
             .app-header {
-                top: clamp(3rem, 6.5vh, 4.1rem);
-                width: 100vw;
-                padding: 0.62rem 0.65rem 0.58rem;
+                top: 3.45rem;
+                padding: 0.5rem 0 0.62rem;
             }
             .app-title {
-                font-size: clamp(1.62rem, 7vw, 2.05rem);
-                min-height: clamp(1.8rem, 7.5vw, 2.18rem);
+                font-size: clamp(1.75rem, 7vw, 2.05rem);
             }
             .date-card {
-                font-size: clamp(0.94rem, 4vw, 1.1rem);
+                font-size: clamp(1rem, 4vw, 1.12rem);
             }
             .date-label {
                 font-size: clamp(0.72rem, 3.2vw, 0.88rem);
@@ -202,16 +181,14 @@ def apply_compact_styles() -> None:
                 border-radius: 1rem;
             }
             div[data-testid="stHorizontalBlock"] {
-                grid-template-columns: minmax(0, 1.16fr) minmax(0, 0.58fr) minmax(0, 0.58fr) !important;
                 gap: clamp(0.08rem, 1vw, 0.16rem) !important;
             }
             div[data-testid="stTextInput"] {
                 margin: 0;
             }
-            div[data-testid="stNumberInput"] input,
             div[data-testid="stTextInput"] input {
-                height: 2.25rem;
-                font-size: clamp(0.82rem, 3.8vw, 1rem);
+                height: 2.3rem;
+                font-size: clamp(0.92rem, 3.8vw, 1.04rem);
                 padding-left: 0.34rem;
                 padding-right: 0.34rem;
                 border-radius: 0.62rem;
@@ -219,10 +196,10 @@ def apply_compact_styles() -> None:
             }
             .field-label,
             .field-prev {
-                min-height: 2.25rem;
+                min-height: 2.3rem;
             }
             .field-label {
-                font-size: clamp(0.78rem, 3.8vw, 1rem);
+                font-size: clamp(0.9rem, 3.9vw, 1.04rem);
                 line-height: 1.06;
             }
             .prev-value {
@@ -308,7 +285,7 @@ def render_form_fields(
         field_meta = metadata[field_name]
         default_value = default_for_field(field_name, field_meta, today_row, yesterday_row)
         previous_text = previous_value_text(field_name, field_meta, yesterday_row)
-        label_col, input_col, prev_col = st.columns([1.08, 1.34, 0.86], gap="small", vertical_alignment="center")
+        label_col, input_col, prev_col = st.columns([1.55, 0.78, 0.95], gap="small", vertical_alignment="center")
 
         with label_col:
             st.markdown(f"<div class='field-label'>{field_meta['label_ko']}</div>", unsafe_allow_html=True)
@@ -330,23 +307,9 @@ def render_input(field_name: str, field_meta: dict[str, Any], default_value: Any
     label = field_meta["label_ko"]
     help_text = field_meta.get("anchor_ko", "")
 
-    if field_meta["type"] in {"number", "slider"}:
-        step = float(field_meta.get("step") or 1)
-        return st.number_input(
-            label,
-            min_value=float(field_meta["min"]) if field_meta.get("min") is not None else None,
-            max_value=float(field_meta["max"]) if field_meta.get("max") is not None else None,
-            value=coerce_numeric(default_value, float(field_meta.get("default", 0))),
-            step=step,
-            format="%.2f" if step < 1 else "%.0f",
-            help=help_text,
-            label_visibility="collapsed",
-            key=field_name,
-        )
-
     return st.text_input(
         label,
-        value="" if default_value is None or pd.isna(default_value) else str(default_value),
+        value=format_default_value(default_value, field_meta),
         help=help_text,
         label_visibility="collapsed",
         key=field_name,
