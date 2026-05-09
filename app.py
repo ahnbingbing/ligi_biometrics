@@ -26,9 +26,41 @@ def apply_compact_styles() -> None:
     st.markdown(
         """
         <style>
+        :root {
+            --ligi-bg: #f5f5f7;
+            --ligi-card: #ffffff;
+            --ligi-text: #1d1d1f;
+            --ligi-title: #000000;
+            --ligi-secondary: #8e8e93;
+            --ligi-prev: #3a3a3c;
+            --ligi-divider: #e5e5ea;
+            --ligi-input-bg: #ffffff;
+            --ligi-input-text: #111827;
+            --ligi-input-border: #d1d5db;
+            --ligi-input-focus: #8f98a3;
+            --ligi-shadow: rgba(0, 0, 0, 0.06);
+            --ligi-input-inner: #f2f2f7;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --ligi-bg: #000000;
+                --ligi-card: #1c1c1e;
+                --ligi-text: #f5f5f7;
+                --ligi-title: #ffffff;
+                --ligi-secondary: #8e8e93;
+                --ligi-prev: #d1d1d6;
+                --ligi-divider: #38383a;
+                --ligi-input-bg: #ffffff;
+                --ligi-input-text: #111827;
+                --ligi-input-border: #636366;
+                --ligi-input-focus: #8e8e93;
+                --ligi-shadow: rgba(0, 0, 0, 0.26);
+                --ligi-input-inner: #e5e5ea;
+            }
+        }
         .stApp {
-            background: #f5f5f7;
-            color: #1d1d1f;
+            background: var(--ligi-bg);
+            color: var(--ligi-text);
         }
         header[data-testid="stHeader"] {
             background: transparent;
@@ -49,7 +81,7 @@ def apply_compact_styles() -> None:
             border: 0;
         }
         .app-title {
-            color: #000000 !important;
+            color: var(--ligi-title) !important;
             font-size: clamp(2.2rem, 5vw, 3.1rem);
             font-weight: 860;
             line-height: 1.08;
@@ -61,7 +93,7 @@ def apply_compact_styles() -> None:
             display: block;
             margin-top: 0.45rem;
             padding: 0;
-            color: #1d1d1f !important;
+            color: var(--ligi-text) !important;
             background: transparent;
             border: 0;
             box-shadow: none;
@@ -69,7 +101,7 @@ def apply_compact_styles() -> None:
             font-weight: 820;
         }
         .date-label {
-            color: #8e8e93 !important;
+            color: var(--ligi-secondary) !important;
             font-size: clamp(0.8rem, 1.5vw, 0.95rem);
             font-weight: 760;
             margin-right: 0.5rem;
@@ -78,8 +110,8 @@ def apply_compact_styles() -> None:
             border: 0;
             border-radius: 1.35rem;
             padding: clamp(0.68rem, 1.4vw, 1rem);
-            background: #ffffff;
-            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.06);
+            background: var(--ligi-card);
+            box-shadow: 0 18px 44px var(--ligi-shadow);
         }
         div[data-testid="stVerticalBlock"] {
             gap: 0.12rem;
@@ -104,14 +136,14 @@ def apply_compact_styles() -> None:
             padding: 0.25rem 0.62rem;
             font-size: clamp(1rem, 1.5vw, 1.12rem);
             font-weight: 700;
-            border: 2px solid #d1d5db;
+            border: 2px solid var(--ligi-input-border);
             border-radius: 0.85rem;
-            color: #111827 !important;
-            background: #ffffff !important;
-            box-shadow: inset 0 0 0 1px #f2f2f7;
+            color: var(--ligi-input-text) !important;
+            background: var(--ligi-input-bg) !important;
+            box-shadow: inset 0 0 0 1px var(--ligi-input-inner);
         }
         div[data-testid="stTextInput"] input:focus {
-            border-color: #8f98a3;
+            border-color: var(--ligi-input-focus);
             box-shadow: 0 0 0 2px rgba(142, 142, 147, 0.18);
         }
         .field-label {
@@ -121,7 +153,7 @@ def apply_compact_styles() -> None:
             font-size: clamp(1rem, 1.8vw, 1.18rem);
             font-weight: 760;
             line-height: 1.16;
-            color: #1d1d1f;
+            color: var(--ligi-text);
             word-break: keep-all;
         }
         .field-prev {
@@ -135,7 +167,7 @@ def apply_compact_styles() -> None:
             max-width: 100%;
             padding: 0.2rem 0.25rem;
             border-radius: 999px;
-            color: #3a3a3c;
+            color: var(--ligi-prev);
             background: transparent;
             border: 0;
             font-weight: 700;
@@ -146,7 +178,7 @@ def apply_compact_styles() -> None:
             vertical-align: middle;
         }
         .field-divider {
-            border-bottom: 1px solid #e5e5ea;
+            border-bottom: 1px solid var(--ligi-divider);
             margin: 0.04rem 0;
         }
         div[data-testid="stFormSubmitButton"] {
