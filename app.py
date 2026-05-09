@@ -26,32 +26,31 @@ def apply_compact_styles() -> None:
     st.markdown(
         """
         <style>
+        .stApp {
+            background: #f5f5f7;
+            color: #1d1d1f;
+        }
+        header[data-testid="stHeader"] {
+            background: transparent;
+        }
         .block-container {
-            padding-top: 1.4rem;
-            padding-bottom: 1rem;
-            max-width: min(94vw, 820px);
+            padding-top: clamp(1.2rem, 4vh, 2.6rem);
+            padding-bottom: 1.25rem;
+            max-width: min(92vw, 720px);
         }
         h2, h3 {
             font-size: 1rem !important;
             margin-top: 0.8rem !important;
         }
         .app-header {
-            position: sticky;
-            top: 3.25rem;
-            z-index: 20;
-            margin: 0 0 1rem;
-            padding: 0.55rem 0 0.75rem;
-            background: linear-gradient(
-                to bottom,
-                var(--background-color) 0%,
-                var(--background-color) 84%,
-                color-mix(in srgb, var(--background-color) 0%, transparent) 100%
-            );
-            border-bottom: 1px solid rgba(255, 255, 255, 0.26);
+            margin: 0 0 1.1rem;
+            padding: 0;
+            background: transparent;
+            border: 0;
         }
         .app-title {
-            color: #ffffff !important;
-            font-size: clamp(2rem, 4vw, 2.75rem);
+            color: #000000 !important;
+            font-size: clamp(2.2rem, 5vw, 3.1rem);
             font-weight: 860;
             line-height: 1.08;
             letter-spacing: 0;
@@ -60,27 +59,27 @@ def apply_compact_styles() -> None:
         }
         .date-card {
             display: block;
-            margin-top: 0.28rem;
+            margin-top: 0.45rem;
             padding: 0;
-            color: #ffffff !important;
+            color: #1d1d1f !important;
             background: transparent;
             border: 0;
             box-shadow: none;
-            font-size: clamp(1rem, 2vw, 1.22rem);
+            font-size: clamp(1.05rem, 2vw, 1.25rem);
             font-weight: 820;
         }
         .date-label {
-            color: rgba(255, 255, 255, 0.68) !important;
+            color: #8e8e93 !important;
             font-size: clamp(0.8rem, 1.5vw, 0.95rem);
             font-weight: 760;
             margin-right: 0.5rem;
         }
         div[data-testid="stForm"] {
-            border: 1px solid rgba(255, 255, 255, 0.42);
-            border-radius: 1.25rem;
-            padding: clamp(0.5rem, 1.2vw, 0.85rem);
-            background: color-mix(in srgb, var(--background-color) 86%, var(--secondary-background-color) 14%);
-            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+            border: 0;
+            border-radius: 1.35rem;
+            padding: clamp(0.68rem, 1.4vw, 1rem);
+            background: #ffffff;
+            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.06);
         }
         div[data-testid="stVerticalBlock"] {
             gap: 0.12rem;
@@ -100,33 +99,33 @@ def apply_compact_styles() -> None:
             margin: 0;
         }
         div[data-testid="stTextInput"] input {
-            height: 2.5rem;
+            height: 2.55rem;
             width: 100%;
-            padding: 0.25rem 0.58rem;
-            font-size: clamp(1rem, 1.6vw, 1.14rem);
+            padding: 0.25rem 0.62rem;
+            font-size: clamp(1rem, 1.5vw, 1.12rem);
             font-weight: 700;
             border: 2px solid #d1d5db;
             border-radius: 0.85rem;
             color: #111827 !important;
             background: #ffffff !important;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+            box-shadow: inset 0 0 0 1px #f2f2f7;
         }
         div[data-testid="stTextInput"] input:focus {
             border-color: #8f98a3;
-            box-shadow: 0 0 0 2px rgba(143, 152, 163, 0.28);
+            box-shadow: 0 0 0 2px rgba(142, 142, 147, 0.18);
         }
         .field-label {
-            min-height: 2.5rem;
+            min-height: 2.55rem;
             display: flex;
             align-items: center;
             font-size: clamp(1rem, 1.8vw, 1.18rem);
             font-weight: 760;
             line-height: 1.16;
-            color: var(--text-color);
+            color: #1d1d1f;
             word-break: keep-all;
         }
         .field-prev {
-            min-height: 2.5rem;
+            min-height: 2.55rem;
             display: flex;
             align-items: center;
             min-width: 0;
@@ -134,11 +133,11 @@ def apply_compact_styles() -> None:
         .prev-value {
             display: inline-block;
             max-width: 100%;
-            padding: 0.24rem 0.52rem;
+            padding: 0.2rem 0.25rem;
             border-radius: 999px;
-            color: var(--text-color);
-            background: color-mix(in srgb, var(--secondary-background-color) 88%, #7aa7ff 12%);
-            border: 1px solid rgba(255, 255, 255, 0.42);
+            color: #3a3a3c;
+            background: transparent;
+            border: 0;
             font-weight: 700;
             font-size: clamp(0.78rem, 1.45vw, 0.98rem);
             white-space: nowrap;
@@ -147,7 +146,7 @@ def apply_compact_styles() -> None:
             vertical-align: middle;
         }
         .field-divider {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+            border-bottom: 1px solid #e5e5ea;
             margin: 0.04rem 0;
         }
         div[data-testid="stFormSubmitButton"] {
@@ -158,17 +157,16 @@ def apply_compact_styles() -> None:
         }
         @media (max-width: 640px) {
             .block-container {
-                padding-top: 1rem;
-                padding-left: 0.28rem;
-                padding-right: 0.28rem;
+                padding-top: max(1.1rem, env(safe-area-inset-top));
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
                 max-width: 100%;
             }
             .app-header {
-                top: 3.45rem;
-                padding: 0.5rem 0 0.62rem;
+                margin-bottom: 0.9rem;
             }
             .app-title {
-                font-size: clamp(1.75rem, 7vw, 2.05rem);
+                font-size: clamp(2rem, 8vw, 2.45rem);
             }
             .date-card {
                 font-size: clamp(1rem, 4vw, 1.12rem);
@@ -177,8 +175,8 @@ def apply_compact_styles() -> None:
                 font-size: clamp(0.72rem, 3.2vw, 0.88rem);
             }
             div[data-testid="stForm"] {
-                padding: 0.48rem 0.3rem 0.85rem;
-                border-radius: 1rem;
+                padding: 0.6rem 0.72rem;
+                border-radius: 1.25rem;
             }
             div[data-testid="stHorizontalBlock"] {
                 gap: clamp(0.08rem, 1vw, 0.16rem) !important;
@@ -187,7 +185,7 @@ def apply_compact_styles() -> None:
                 margin: 0;
             }
             div[data-testid="stTextInput"] input {
-                height: 2.3rem;
+                height: 2.4rem;
                 font-size: clamp(0.92rem, 3.8vw, 1.04rem);
                 padding-left: 0.34rem;
                 padding-right: 0.34rem;
@@ -196,7 +194,7 @@ def apply_compact_styles() -> None:
             }
             .field-label,
             .field-prev {
-                min-height: 2.3rem;
+                min-height: 2.4rem;
             }
             .field-label {
                 font-size: clamp(0.9rem, 3.9vw, 1.04rem);
@@ -285,7 +283,7 @@ def render_form_fields(
         field_meta = metadata[field_name]
         default_value = default_for_field(field_name, field_meta, today_row, yesterday_row)
         previous_text = previous_value_text(field_name, field_meta, yesterday_row)
-        label_col, input_col, prev_col = st.columns([1.55, 0.78, 0.95], gap="small", vertical_alignment="center")
+        label_col, input_col, prev_col = st.columns([1.62, 0.72, 0.98], gap="small", vertical_alignment="center")
 
         with label_col:
             st.markdown(f"<div class='field-label'>{field_meta['label_ko']}</div>", unsafe_allow_html=True)
