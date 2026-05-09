@@ -1,0 +1,152 @@
+{
+  "weight_kg": {
+    "label_ko": "체중",
+    "type": "number",
+    "min": 30,
+    "max": 200,
+    "step": 0.1,
+    "unit": "kg",
+    "anchor_ko": "아침 화장실 후, 식사 전 같은 조건에서 측정합니다.",
+    "default": 70.0
+  },
+  "sleep_quality": {
+    "label_ko": "수면 질",
+    "type": "slider",
+    "min": 0,
+    "max": 1,
+    "step": 0.1,
+    "unit": "점",
+    "anchor_ko": "0=매우 나쁨, 0.5=보통, 1=회복감 좋음",
+    "default": 0.5
+  },
+  "sleep_hours": {
+    "label_ko": "수면 시간",
+    "type": "number",
+    "min": 0,
+    "max": 16,
+    "step": 0.5,
+    "unit": "시간",
+    "anchor_ko": "실제 잠든 시간을 0.5시간 단위로 기록합니다.",
+    "default": 7.0
+  },
+  "alcohol_intake": {
+    "label_ko": "음주",
+    "type": "slider",
+    "min": 0,
+    "max": 1,
+    "step": 0.1,
+    "unit": "점",
+    "anchor_ko": "0=없음, 0.5=중간, 1=많음/회복 부담 큼",
+    "default": 0
+  },
+  "salty_carb_heavy_meal": {
+    "label_ko": "짠 음식/탄수화물 많은 식사",
+    "type": "slider",
+    "min": 0,
+    "max": 1,
+    "step": 0.1,
+    "unit": "점",
+    "anchor_ko": "0=거의 없음, 0.5=중간, 1=매우 많음",
+    "default": 0
+  },
+  "allergy_histamine_score": {
+    "label_ko": "알레르기/히스타민 반응",
+    "type": "slider",
+    "min": 0,
+    "max": 1,
+    "step": 0.1,
+    "unit": "점",
+    "anchor_ko": "0=없음, 0.5=뚜렷함, 1=강함",
+    "default": 0
+  },
+  "bowel_status": {
+    "label_ko": "배변 상태",
+    "type": "slider",
+    "min": 0,
+    "max": 1,
+    "step": 0.1,
+    "unit": "점",
+    "anchor_ko": "0=정상/가벼움, 0.5=정체감/잔변감, 1=강한 불편 또는 배변 문제",
+    "default": 0
+  },
+  "exercise": {
+    "label_ko": "운동",
+    "type": "text",
+    "min": null,
+    "max": null,
+    "step": null,
+    "unit": "",
+    "anchor_ko": "운동 종류와 강도를 짧게 적습니다.",
+    "default": ""
+  },
+  "non_exercise_kcal": {
+    "label_ko": "운동외 소모 칼로리",
+    "type": "number",
+    "min": 0,
+    "max": 3000,
+    "step": 10,
+    "unit": "kcal",
+    "anchor_ko": "운동으로 분류되지 않은 활동/기초 외 추가 소모 추정치입니다. 없으면 0으로 둡니다.",
+    "default": 0
+  },
+  "bloating_swelling": {
+    "label_ko": "붓기/수분감",
+    "type": "slider",
+    "min": 0,
+    "max": 1,
+    "step": 0.1,
+    "unit": "점",
+    "anchor_ko": "0=없음, 0.5=뚜렷함, 1=손/얼굴/복부 붓기 강함",
+    "default": 0
+  },
+  "gas_distension": {
+    "label_ko": "장가스/팽만",
+    "type": "slider",
+    "min": 0,
+    "max": 1,
+    "step": 0.1,
+    "unit": "점",
+    "anchor_ko": "0=없음, 0.5=뚜렷함, 1=가스와 복부 팽창 강함",
+    "default": 0
+  },
+  "stress_level": {
+    "label_ko": "스트레스",
+    "type": "slider",
+    "min": 0,
+    "max": 1,
+    "step": 0.1,
+    "unit": "점",
+    "anchor_ko": "0=낮음, 0.5=중간, 1=매우 높음",
+    "default": 1
+  },
+  "overall_condition": {
+    "label_ko": "전반 컨디션",
+    "type": "slider",
+    "min": 0,
+    "max": 1,
+    "step": 0.1,
+    "unit": "점",
+    "anchor_ko": "0=나쁨, 0.5=보통, 1=좋음",
+    "default": 0.5
+  },
+  "night_sweat_score": {
+    "label_ko": "야간 발한",
+    "type": "slider",
+    "min": 0,
+    "max": 3,
+    "step": 1,
+    "unit": "점",
+    "anchor_ko": "0=없음, 1=약간, 2=뚜렷함, 3=많이 땀남",
+    "default": 0
+  },
+  "notes": {
+    "label_ko": "메모",
+    "type": "text",
+    "min": null,
+    "max": null,
+    "step": null,
+    "unit": "",
+    "anchor_ko": "특이사항, 식사, 컨디션 변화 등을 자유롭게 적습니다.",
+    "default": ""
+  }
+}

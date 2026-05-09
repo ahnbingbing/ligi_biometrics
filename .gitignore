@@ -1,0 +1,10 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+data/biometrics.csv
+data/biometrics_origin.csv
+data/today_reminder.txt
+data/latest_analysis.md
