@@ -27,7 +27,7 @@ def apply_compact_styles() -> None:
         """
         <style>
         .block-container {
-            padding-top: 5.9rem;
+            padding-top: 8rem;
             padding-bottom: 1rem;
             max-width: 720px;
         }
@@ -37,13 +37,13 @@ def apply_compact_styles() -> None:
         }
         .app-header {
             position: fixed;
-            top: 0;
+            top: 3rem;
             left: 50%;
             transform: translateX(-50%);
             width: min(720px, calc(100vw - 1rem));
             z-index: 999;
             margin: 0;
-            padding: 0.7rem 0.4rem 0.62rem;
+            padding: 0.7rem 0.4rem 0.66rem;
             background: linear-gradient(
                 to bottom,
                 var(--background-color) 0%,
@@ -94,7 +94,7 @@ def apply_compact_styles() -> None:
         }
         div[data-testid="stHorizontalBlock"] {
             display: grid !important;
-            grid-template-columns: minmax(8.8rem, 1.05fr) minmax(8.6rem, 1.18fr) minmax(5.4rem, 0.76fr) !important;
+            grid-template-columns: minmax(9.2rem, 1.28fr) minmax(6rem, 0.72fr) minmax(6.3rem, 0.78fr) !important;
             gap: 0.45rem !important;
             align-items: center !important;
             width: 100%;
@@ -120,10 +120,10 @@ def apply_compact_styles() -> None:
         div[data-testid="stTextInput"] input {
             height: 2.55rem;
             width: 100%;
-            padding: 0.25rem 0.72rem;
-            font-size: 1.02rem;
+            padding: 0.25rem 0.55rem;
+            font-size: 1.08rem;
             font-weight: 700;
-            border: 1px solid #e1e6ee;
+            border: 2px solid #d1d5db;
             border-radius: 0.85rem;
             color: #111827 !important;
             background: #ffffff !important;
@@ -131,14 +131,14 @@ def apply_compact_styles() -> None:
         }
         div[data-testid="stNumberInput"] input:focus,
         div[data-testid="stTextInput"] input:focus {
-            border-color: #8ab4ff;
-            box-shadow: 0 0 0 3px rgba(79, 139, 255, 0.18);
+            border-color: #8f98a3;
+            box-shadow: 0 0 0 2px rgba(143, 152, 163, 0.28);
         }
         .field-label {
             min-height: 2.55rem;
             display: flex;
             align-items: center;
-            font-size: 1rem;
+            font-size: 1.08rem;
             font-weight: 760;
             line-height: 1.16;
             color: var(--text-color);
@@ -159,7 +159,7 @@ def apply_compact_styles() -> None:
             background: color-mix(in srgb, var(--secondary-background-color) 88%, #7aa7ff 12%);
             border: 1px solid rgba(255, 255, 255, 0.42);
             font-weight: 700;
-            font-size: 0.78rem;
+            font-size: 0.88rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -177,32 +177,33 @@ def apply_compact_styles() -> None:
         }
         @media (max-width: 640px) {
             .block-container {
-                padding-top: 5.35rem;
-                padding-left: 0.35rem;
-                padding-right: 0.35rem;
+                padding-top: 8.2rem;
+                padding-left: 0.25rem;
+                padding-right: 0.25rem;
                 max-width: 100%;
             }
             .app-header {
+                top: 3.7rem;
                 width: 100vw;
-                padding: 0.64rem 0.7rem 0.58rem;
+                padding: 0.7rem 0.8rem 0.64rem;
             }
             .app-title {
-                font-size: 1.72rem;
-                min-height: 1.9rem;
+                font-size: 1.95rem;
+                min-height: 2.1rem;
             }
             .date-card {
-                font-size: 0.98rem;
+                font-size: 1.08rem;
             }
             .date-label {
-                font-size: 0.78rem;
+                font-size: 0.86rem;
             }
             div[data-testid="stForm"] {
-                padding: 0.52rem 0.45rem 0.85rem;
+                padding: 0.48rem 0.3rem 0.85rem;
                 border-radius: 1rem;
             }
             div[data-testid="stHorizontalBlock"] {
-                grid-template-columns: minmax(4.8rem, 0.92fr) minmax(5.2rem, 1.08fr) minmax(3.7rem, 0.68fr) !important;
-                gap: 0.18rem !important;
+                grid-template-columns: minmax(6.15rem, 1.18fr) minmax(4.25rem, 0.62fr) minmax(4.15rem, 0.58fr) !important;
+                gap: 0.12rem !important;
             }
             div[data-testid="stTextInput"] {
                 margin: 0;
@@ -210,22 +211,23 @@ def apply_compact_styles() -> None:
             div[data-testid="stNumberInput"] input,
             div[data-testid="stTextInput"] input {
                 height: 2.25rem;
-                font-size: 0.9rem;
-                padding-left: 0.42rem;
-                padding-right: 0.42rem;
-                border-radius: 0.66rem;
+                font-size: 1rem;
+                padding-left: 0.34rem;
+                padding-right: 0.34rem;
+                border-radius: 0.62rem;
+                border-width: 2px;
             }
             .field-label,
             .field-prev {
                 min-height: 2.25rem;
             }
             .field-label {
-                font-size: 0.84rem;
-                line-height: 1.08;
+                font-size: 0.98rem;
+                line-height: 1.06;
             }
             .prev-value {
-                font-size: 0.66rem;
-                padding: 0.13rem 0.25rem;
+                font-size: 0.78rem;
+                padding: 0.13rem 0.22rem;
             }
             .field-divider {
                 margin: 0.02rem 0;
