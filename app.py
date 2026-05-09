@@ -190,9 +190,9 @@ def apply_compact_styles() -> None:
         @media (max-width: 640px) {
             .block-container {
                 padding-top: max(1.1rem, env(safe-area-inset-top));
-                padding-left: 0.75rem;
-                padding-right: 0.75rem;
-                max-width: 100%;
+                padding-left: 0;
+                padding-right: 0;
+                max-width: min(94vw, 390px);
             }
             .app-header {
                 margin-bottom: 0.9rem;
@@ -207,23 +207,27 @@ def apply_compact_styles() -> None:
                 font-size: clamp(0.72rem, 3.2vw, 0.88rem);
             }
             div[data-testid="stForm"] {
-                padding: 0.6rem 0.72rem;
+                padding: 0.58rem 0.62rem;
                 border-radius: 1.25rem;
             }
             div[data-testid="stHorizontalBlock"] {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1.42fr) minmax(0, 0.72fr) minmax(0, 0.86fr) !important;
                 gap: clamp(0.08rem, 1vw, 0.16rem) !important;
+                align-items: center !important;
+                width: 100%;
             }
             div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1) {
-                flex: 0 0 43% !important;
-                width: 43% !important;
+                width: auto !important;
+                flex: none !important;
             }
             div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) {
-                flex: 0 0 28% !important;
-                width: 28% !important;
+                width: auto !important;
+                flex: none !important;
             }
             div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3) {
-                flex: 0 0 26% !important;
-                width: 26% !important;
+                width: auto !important;
+                flex: none !important;
             }
             div[data-testid="stTextInput"] {
                 margin: 0;
