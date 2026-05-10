@@ -424,11 +424,10 @@ def post_trend_report_to_slack(
     today_row: dict[str, Any],
     metadata: dict[str, dict[str, Any]],
 ) -> str:
-    app_url = slack_notify.get_app_url() or DEFAULT_APP_URL
     summary_text = "\n".join(f"- {line}" for line in summary_lines[:3])
     main_text = f"*Ligi Biometrics 최근 트렌드 분석*\n{summary_text}"
     thread_text = f"{today_values_text(today_row, metadata)}\n\n*전체 분석*\n{full_analysis}"
-    return slack_notify.post_threaded_message(main_text, thread_text, link=app_url)
+    return slack_notify.post_threaded_message(main_text, thread_text)
 
 
 def render_charts(df: pd.DataFrame) -> None:
@@ -504,7 +503,7 @@ def main() -> None:
             if slack_post_mode == "thread":
                 st.success("분석 요약과 상세 내용을 Slack thread로 전송했습니다.")
             else:
-                st.success("분석 내용을 Slack으로 전송했습니다. thread 전송이 실패해 webhook으로 대체했습니다.")
+                st.success("분석 내용을 Slack으로 전송했습니다.")
         except Exception as exc:
             st.warning(f"Slack 전송에 실패했습니다: {exc}")
         df = updated_df

@@ -112,17 +112,20 @@ def post_threaded_message(
     thread_text: str,
     *,
     link: str | None = None,
+    fallback_to_webhook: bool = False,
 ) -> str:
     """Post a Slack main message and put details in its thread.
 
-    Returns "thread" when posted through Slack Web API. If bot credentials are
-    not configured or the Web API post fails, falls back to a single
-    incoming-webhook message and returns "webhook".
+    Returns "thread" when posted through Slack Web API. If requested, missing
+    bot credentials or Web API errors fall back to one incoming-webhook message
+    and return "webhook".
     """
     channel = get_channel_id()
     token = get_bot_token()
     combined_text = f"{main_text}\n\n*상세 분석*\n{thread_text}"
     if not channel or not token:
+        if not fallback_to_webhook:
+            raise RuntimeError("SLACK_BOT_TOKEN and SLACK_CHANNEL_ID are required for threaded messages.")
         post_message(combined_text, link=link)
         return "webhook"
 
@@ -155,9 +158,11 @@ def post_threaded_message(
                     "text": chunk,
                     "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": chunk}}],
                 },
-            )
+        )
         return "thread"
     except Exception:
+        if not fallback_to_webhook:
+            raise
         post_message(combined_text, link=link)
         return "webhook"
 
