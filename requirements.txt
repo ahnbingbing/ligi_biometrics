@@ -1,5 +1,6 @@
 streamlit
 pandas
+altair
 openai
 python-dotenv
 gspread>=6.0

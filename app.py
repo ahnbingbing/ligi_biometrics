@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
@@ -25,6 +26,7 @@ import slack_notify
 
 
 DEFAULT_APP_URL = "https://ligibiometrics.streamlit.app/"
+VISIBLE_FIELD_ORDER = [field_name for field_name in FIELD_ORDER if field_name != "notes"]
 
 
 def apply_compact_styles() -> None:
@@ -283,9 +285,19 @@ def install_input_select_script() -> None:
     components.html(
         """
         <script>
+        const textInputLabels = new Set(['운동']);
         const attachSelectOnFocus = () => {
             const doc = window.parent.document;
-            doc.querySelectorAll('input').forEach((input) => {
+            doc.querySelectorAll('div[data-testid="stTextInput"] input').forEach((input) => {
+                const label = input.getAttribute('aria-label') || '';
+                if (!textInputLabels.has(label)) {
+                    input.inputMode = 'decimal';
+                    input.pattern = '[0-9]*[.,]?[0-9]*';
+                    input.autocomplete = 'off';
+                } else {
+                    input.inputMode = 'text';
+                    input.removeAttribute('pattern');
+                }
                 if (input.dataset.ligiSelectAttached === 'true') return;
                 input.dataset.ligiSelectAttached = 'true';
                 input.addEventListener('focus', () => {
@@ -332,7 +344,7 @@ def render_form_fields(
 ) -> dict[str, Any]:
     submitted_values: dict[str, Any] = {}
 
-    for field_name in FIELD_ORDER:
+    for field_name in VISIBLE_FIELD_ORDER:
         field_meta = metadata[field_name]
         default_value = default_for_field(field_name, field_meta, today_row, yesterday_row)
         previous_text = previous_value_text(field_name, field_meta, yesterday_row)
@@ -405,7 +417,7 @@ def normalize_submitted_values(
 
 def today_values_text(today_row: dict[str, Any], metadata: dict[str, dict[str, Any]]) -> str:
     lines = ["*오늘 입력값*"]
-    for field_name in FIELD_ORDER:
+    for field_name in VISIBLE_FIELD_ORDER:
         field_meta = metadata[field_name]
         label = field_meta["label_ko"]
         unit = field_meta.get("unit", "")
@@ -445,10 +457,58 @@ def render_charts(df: pd.DataFrame) -> None:
         chart_df[column] = pd.to_numeric(chart_df[column], errors="coerce")
 
     st.subheader("추세")
-    if chart_df["weight_kg"].notna().any():
-        st.line_chart(chart_df[["weight_kg"]], height=220)
-    if chart_df[["bloating_swelling", "gas_distension"]].notna().any().any():
-        st.line_chart(chart_df[["bloating_swelling", "gas_distension"]], height=220)
+    if not chart_df[numeric_columns].notna().any().any():
+        return
+
+    plot_df = chart_df.reset_index()
+    symptom_df = plot_df.melt(
+        id_vars=[DATE_COLUMN],
+        value_vars=["bloating_swelling", "gas_distension"],
+        var_name="metric",
+        value_name="value",
+    ).dropna(subset=["value"])
+    symptom_df["metric"] = symptom_df["metric"].map(
+        {
+            "bloating_swelling": "붓기/수분감",
+            "gas_distension": "장가스/팽만",
+        }
+    )
+
+    layers = []
+    if not symptom_df.empty:
+        layers.append(
+            alt.Chart(symptom_df)
+            .mark_line(point=True, strokeWidth=2)
+            .encode(
+                x=alt.X(f"{DATE_COLUMN}:T", title="날짜"),
+                y=alt.Y("value:Q", title="증상 점수", scale=alt.Scale(domain=[0, 1])),
+                color=alt.Color("metric:N", title="지표"),
+                tooltip=[
+                    alt.Tooltip(f"{DATE_COLUMN}:T", title="날짜"),
+                    alt.Tooltip("metric:N", title="지표"),
+                    alt.Tooltip("value:Q", title="값", format=".2f"),
+                ],
+            )
+        )
+
+    weight_df = plot_df[[DATE_COLUMN, "weight_kg"]].dropna(subset=["weight_kg"])
+    if not weight_df.empty:
+        layers.append(
+            alt.Chart(weight_df)
+            .mark_line(point=True, strokeDash=[5, 3], color="#111827", strokeWidth=2)
+            .encode(
+                x=alt.X(f"{DATE_COLUMN}:T", title="날짜"),
+                y=alt.Y("weight_kg:Q", title="몸무게 (kg)", axis=alt.Axis(orient="right")),
+                tooltip=[
+                    alt.Tooltip(f"{DATE_COLUMN}:T", title="날짜"),
+                    alt.Tooltip("weight_kg:Q", title="몸무게", format=".1f"),
+                ],
+            )
+        )
+
+    if layers:
+        chart = alt.layer(*layers).resolve_scale(y="independent").properties(height=260)
+        st.altair_chart(chart, use_container_width=True)
 
 
 def main() -> None:
