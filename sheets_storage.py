@@ -57,15 +57,25 @@ def _streamlit_secret(key: str) -> Any:
         return None
 
 
+def _first_streamlit_secret(*keys: str) -> Any:
+    for key in keys:
+        value = _streamlit_secret(key)
+        if value:
+            return value
+    return None
+
+
 def _load_credentials() -> Credentials:
-    gcp = _streamlit_secret("gcp_service_account")
+    gcp = _first_streamlit_secret("gcp_service_account", "GCP_SERVICE_ACCOUNT")
     if gcp:
         info = dict(gcp)
         return Credentials.from_service_account_info(info, scopes=SCOPES)
 
-    creds_json = os.getenv("GOOGLE_SHEETS_CREDS")
+    creds_json = _first_streamlit_secret("GOOGLE_SHEETS_CREDS", "google_sheets_creds") or os.getenv(
+        "GOOGLE_SHEETS_CREDS"
+    )
     if creds_json:
-        info = json.loads(creds_json)
+        info = json.loads(str(creds_json))
         return Credentials.from_service_account_info(info, scopes=SCOPES)
 
     creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
@@ -79,8 +89,10 @@ def _load_credentials() -> Credentials:
 
 
 def credential_source() -> str:
-    if _streamlit_secret("gcp_service_account"):
+    if _first_streamlit_secret("gcp_service_account", "GCP_SERVICE_ACCOUNT"):
         return "streamlit secrets: gcp_service_account"
+    if _first_streamlit_secret("GOOGLE_SHEETS_CREDS", "google_sheets_creds"):
+        return "streamlit secrets: GOOGLE_SHEETS_CREDS"
     if os.getenv("GOOGLE_SHEETS_CREDS"):
         return "env: GOOGLE_SHEETS_CREDS"
     creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
@@ -90,7 +102,7 @@ def credential_source() -> str:
 
 
 def _resolve_setting(key: str, env_var: str, default: str | None = None) -> str | None:
-    value = _streamlit_secret(key)
+    value = _first_streamlit_secret(key, key.upper(), env_var, env_var.lower())
     if value:
         return str(value)
     return os.getenv(env_var, default)

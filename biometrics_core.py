@@ -12,8 +12,10 @@ from openai import OpenAI
 
 try:
     import sheets_storage
-except ImportError:
+    SHEETS_STORAGE_IMPORT_ERROR = None
+except ImportError as exc:
     sheets_storage = None
+    SHEETS_STORAGE_IMPORT_ERROR = exc
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -138,6 +140,32 @@ Output format:
 7. 한 가지 우선 조정
 """
 
+TREND_REPORT_USER_PROMPT_TEMPLATE = """Analyze recent biometric trend data after today's check-in.
+
+Rules:
+- Answer in Korean.
+- Return JSON only. Do not wrap it in markdown fences.
+- `summary_lines` must contain exactly 3 short lines suitable for a Slack main message.
+- `full_analysis` can be longer, but keep it practical and concise.
+- In `full_analysis`, focus on recent direction, repeated patterns, and likely drivers.
+- Separate bloating/swelling from gas/distension.
+- Do not overclaim fat gain or fat loss from short-term weight movement.
+- Mention uncertainty clearly.
+
+Input:
+TODAY_ROW:
+{today_row}
+
+RECENT_ROWS:
+{recent_rows}
+
+Output JSON schema:
+{{
+  "summary_lines": ["line 1", "line 2", "line 3"],
+  "full_analysis": "markdown analysis"
+}}
+"""
+
 
 def load_metadata() -> dict[str, dict[str, Any]]:
     with METADATA_PATH.open("r", encoding="utf-8") as f:
@@ -207,6 +235,14 @@ def save_sheets_dataframe(df: pd.DataFrame) -> bool:
         return False
 
 
+def diagnose_sheets_connection() -> list[tuple[str, bool, str]]:
+    if sheets_storage is None:
+        detail = str(SHEETS_STORAGE_IMPORT_ERROR) if SHEETS_STORAGE_IMPORT_ERROR else "unknown import error"
+        return [("Sheets module", False, f"sheets_storage.py could not be imported: {detail}")]
+    load_environment()
+    return sheets_storage.diagnose_connection()
+
+
 def migrate_origin_data(df: pd.DataFrame) -> pd.DataFrame:
     if not ORIGIN_CSV_PATH.exists():
         return df
@@ -233,11 +269,11 @@ def load_data() -> pd.DataFrame:
     return migrate_origin_data(load_csv(CSV_PATH))
 
 
-def save_data(df: pd.DataFrame) -> None:
+def save_data(df: pd.DataFrame) -> bool:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     output = normalize_dataframe(df)
     output.to_csv(CSV_PATH, index=False)
-    save_sheets_dataframe(output)
+    return save_sheets_dataframe(output)
 
 
 def clean_row(row: dict[str, Any] | None) -> dict[str, Any]:
@@ -287,7 +323,7 @@ def upsert_today(df: pd.DataFrame, today_iso: str, row: dict[str, Any]) -> pd.Da
     if df.empty or today_iso not in set(df[DATE_COLUMN].astype(str)):
         return normalize_dataframe(pd.concat([df, pd.DataFrame([row_with_date])], ignore_index=True))
 
-    updated = df.copy()
+    updated = df.copy().astype("object")
     mask = updated[DATE_COLUMN].astype(str) == today_iso
     for column, value in row_with_date.items():
         updated.loc[mask, column] = value
@@ -365,6 +401,68 @@ def generate_trend_analysis(recent_rows: list[dict[str, Any]]) -> str:
         return format_openai_error(exc)
 
 
+def _strip_json_fence(text: str) -> str:
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        lines = stripped.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        stripped = "\n".join(lines).strip()
+    return stripped
+
+
+def _fallback_summary_lines(text: str) -> list[str]:
+    lines = [
+        line.strip(" -")
+        for line in text.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    summary_lines = lines[:3]
+    while len(summary_lines) < 3:
+        summary_lines.append("오늘 기록을 반영한 최근 흐름 분석을 확인해 주세요.")
+    return summary_lines
+
+
+def generate_trend_report(
+    today_row: dict[str, Any],
+    recent_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    client = openai_client()
+    if client is None:
+        message = "OPENAI_API_KEY가 .env에 설정되어 있지 않아 트렌드 분석을 생성하지 못했습니다."
+        return {"summary_lines": _fallback_summary_lines(message), "full_analysis": message}
+
+    user_prompt = TREND_REPORT_USER_PROMPT_TEMPLATE.format(
+        today_row=json.dumps(today_row, ensure_ascii=False, indent=2),
+        recent_rows=json.dumps(recent_rows, ensure_ascii=False, indent=2),
+    )
+    try:
+        response = client.responses.create(
+            model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+            temperature=0.3,
+            input=[
+                {"role": "system", "content": TREND_ANALYSIS_SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+        raw_text = response.output_text
+        try:
+            parsed = json.loads(_strip_json_fence(raw_text))
+        except json.JSONDecodeError:
+            return {"summary_lines": _fallback_summary_lines(raw_text), "full_analysis": raw_text}
+        summary_lines = parsed.get("summary_lines") or _fallback_summary_lines(raw_text)
+        summary_lines = [str(line).strip() for line in summary_lines if str(line).strip()][:3]
+        while len(summary_lines) < 3:
+            summary_lines.append("오늘 기록을 반영한 최근 흐름 분석을 확인해 주세요.")
+        full_analysis = str(parsed.get("full_analysis") or raw_text).strip()
+        return {"summary_lines": summary_lines, "full_analysis": full_analysis}
+    except Exception as exc:
+        message = format_openai_error(exc)
+        return {"summary_lines": _fallback_summary_lines(message), "full_analysis": message}
+
+
 def format_openai_error(exc: Exception) -> str:
     message = str(exc)
     if "insufficient_quota" in message or "exceeded your current quota" in message:
@@ -408,33 +506,4 @@ def generate_reminder_message(
     previous_row: dict[str, Any] | None,
     today_iso: str | None = None,
 ) -> str:
-    today_iso = today_iso or date.today().isoformat()
-    previous = clean_row(previous_row)
-    previous_date = previous.get(DATE_COLUMN, "이전 기록 없음")
-    lines = [
-        f"# Ligi Biometrics 오늘 체크인 ({today_iso})",
-        "",
-        f"어제 기준 앵커: {previous_date}",
-        "",
-        "오늘 값을 입력할 때는 아래 어제 값과 척도 설명을 기준으로 비교해 주세요.",
-        "",
-    ]
-
-    for category_name, fields in CATEGORIES.items():
-        lines.append(f"## {category_name}")
-        for field_name in fields:
-            field_meta = metadata[field_name]
-            label = field_meta["label_ko"]
-            unit = field_meta.get("unit", "")
-            previous_value = format_value(previous.get(field_name), unit)
-            scale = field_scale_text(field_meta)
-            anchor = field_meta.get("anchor_ko", "")
-            lines.append(f"- {label}: 어제 {previous_value} | 척도 {scale} | {anchor}")
-        lines.append("")
-
-    lines.extend(
-        [
-            "체크인 후 Streamlit UI에서 저장하거나, n8n/cron 플로우에서 필요한 방식으로 이 메시지를 전달하세요.",
-        ]
-    )
-    return "\n".join(lines)
+    return "오늘도 기록하러 가볼까요?"

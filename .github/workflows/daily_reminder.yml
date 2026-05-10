@@ -1,4 +1,4 @@
-name: Daily Slack Reminder And Analysis
+name: Daily Slack Reminder
 
 on:
   schedule:
@@ -10,7 +10,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  remind-and-analyze:
+  remind:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -35,13 +35,3 @@ jobs:
           APP_URL: https://ligibiometrics.streamlit.app/
           TZ: Asia/Seoul
         run: python batch_reminder.py --slack --no-save
-
-      - name: Send trend analysis to Slack
-        env:
-          GOOGLE_SHEETS_CREDS: ${{ secrets.GOOGLE_SHEETS_CREDS }}
-          SHEET_ID: ${{ secrets.SHEET_ID }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          APP_URL: https://ligibiometrics.streamlit.app/
-          TZ: Asia/Seoul
-        run: python batch_analysis.py --slack --no-save --no-print

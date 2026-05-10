@@ -1,6 +1,6 @@
 """Slack incoming webhook posting helper.
 
-Reads `SLACK_WEBHOOK_URL` from env (or `slack_webhook_url` from Streamlit secrets)
+Reads `SLACK_WEBHOOK_URL` from env or Streamlit secrets
 and posts plain-text or markdown-style messages.
 """
 
@@ -8,9 +8,17 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+from dotenv import load_dotenv
+
+
+BASE_DIR = Path(__file__).resolve().parent
+MAX_SECTION_TEXT_LENGTH = 3000
+SECTION_CHUNK_LENGTH = 2800
 
 
 def _streamlit_secret(key: str) -> str | None:
@@ -25,8 +33,133 @@ def _streamlit_secret(key: str) -> str | None:
         return None
 
 
+def _first_streamlit_secret(*keys: str) -> str | None:
+    for key in keys:
+        value = _streamlit_secret(key)
+        if value:
+            return value
+    return None
+
+
 def get_webhook_url() -> str | None:
-    return _streamlit_secret("slack_webhook_url") or os.getenv("SLACK_WEBHOOK_URL")
+    load_dotenv(BASE_DIR / ".env")
+    return (
+        _first_streamlit_secret("SLACK_WEBHOOK_URL", "slack_webhook_url")
+        or os.getenv("SLACK_WEBHOOK_URL")
+    )
+
+
+def get_app_url() -> str | None:
+    load_dotenv(BASE_DIR / ".env")
+    return _first_streamlit_secret("APP_URL", "app_url") or os.getenv("APP_URL")
+
+
+def get_bot_token() -> str | None:
+    load_dotenv(BASE_DIR / ".env")
+    return _first_streamlit_secret("SLACK_BOT_TOKEN", "slack_bot_token") or os.getenv("SLACK_BOT_TOKEN")
+
+
+def get_channel_id() -> str | None:
+    load_dotenv(BASE_DIR / ".env")
+    return _first_streamlit_secret("SLACK_CHANNEL_ID", "slack_channel_id") or os.getenv("SLACK_CHANNEL_ID")
+
+
+def _split_section_text(text: str) -> list[str]:
+    chunks: list[str] = []
+    remaining = text
+    while len(remaining) > MAX_SECTION_TEXT_LENGTH:
+        split_at = remaining.rfind("\n", 0, SECTION_CHUNK_LENGTH)
+        if split_at <= 0:
+            split_at = SECTION_CHUNK_LENGTH
+        chunks.append(remaining[:split_at].strip())
+        remaining = remaining[split_at:].strip()
+    if remaining:
+        chunks.append(remaining)
+    return chunks
+
+
+def _post_slack_api(path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    token = get_bot_token()
+    if not token:
+        raise RuntimeError("SLACK_BOT_TOKEN is not configured.")
+
+    data = json.dumps(payload).encode("utf-8")
+    request = Request(
+        f"https://slack.com/api/{path}",
+        data=data,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json; charset=utf-8",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=15) as response:
+            body = response.read().decode("utf-8", errors="replace")
+            result = json.loads(body)
+            if response.status >= 300 or not result.get("ok"):
+                raise RuntimeError(f"Slack API error: {body}")
+            return result
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Slack API HTTP error {exc.code}: {details}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"Slack API connection error: {exc}") from exc
+
+
+def post_threaded_message(
+    main_text: str,
+    thread_text: str,
+    *,
+    link: str | None = None,
+) -> str:
+    """Post a Slack main message and put details in its thread.
+
+    Returns "thread" when posted through Slack Web API. If bot credentials are
+    not configured or the Web API post fails, falls back to a single
+    incoming-webhook message and returns "webhook".
+    """
+    channel = get_channel_id()
+    token = get_bot_token()
+    combined_text = f"{main_text}\n\n*상세 분석*\n{thread_text}"
+    if not channel or not token:
+        post_message(combined_text, link=link)
+        return "webhook"
+
+    main_payload: dict[str, Any] = {"channel": channel, "text": main_text}
+    if link:
+        main_payload["blocks"] = [
+            {"type": "section", "text": {"type": "mrkdwn", "text": main_text}},
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "기록 보러가기"},
+                        "url": link,
+                        "style": "primary",
+                    }
+                ],
+            },
+        ]
+
+    try:
+        main_result = _post_slack_api("chat.postMessage", main_payload)
+        thread_ts = main_result["ts"]
+        for chunk in _split_section_text(thread_text):
+            _post_slack_api(
+                "chat.postMessage",
+                {
+                    "channel": channel,
+                    "thread_ts": thread_ts,
+                    "text": chunk,
+                    "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": chunk}}],
+                },
+            )
+        return "thread"
+    except Exception:
+        post_message(combined_text, link=link)
+        return "webhook"
 
 
 def post_message(text: str, *, link: str | None = None) -> None:
@@ -48,10 +181,10 @@ def post_message(text: str, *, link: str | None = None) -> None:
     payload: dict[str, Any] = {"text": text}
     if link:
         payload["blocks"] = [
-            {
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": text},
-            },
+            {"type": "section", "text": {"type": "mrkdwn", "text": chunk}}
+            for chunk in _split_section_text(text)
+        ]
+        payload["blocks"].append(
             {
                 "type": "actions",
                 "elements": [
@@ -62,8 +195,8 @@ def post_message(text: str, *, link: str | None = None) -> None:
                         "style": "primary",
                     }
                 ],
-            },
-        ]
+            }
+        )
 
     data = json.dumps(payload).encode("utf-8")
     request = Request(

@@ -11,7 +11,8 @@ from biometrics_core import (
     DATE_COLUMN,
     FIELD_ORDER,
     default_for_field,
-    generate_analysis,
+    diagnose_sheets_connection,
+    generate_trend_report,
     get_latest_previous_row,
     get_today_row,
     load_data,
@@ -20,6 +21,10 @@ from biometrics_core import (
     save_data,
     upsert_today,
 )
+import slack_notify
+
+
+DEFAULT_APP_URL = "https://ligibiometrics.streamlit.app/"
 
 
 def apply_compact_styles() -> None:
@@ -398,6 +403,34 @@ def normalize_submitted_values(
     return normalized
 
 
+def today_values_text(today_row: dict[str, Any], metadata: dict[str, dict[str, Any]]) -> str:
+    lines = ["*오늘 입력값*"]
+    for field_name in FIELD_ORDER:
+        field_meta = metadata[field_name]
+        label = field_meta["label_ko"]
+        unit = field_meta.get("unit", "")
+        value = today_row.get(field_name)
+        if value is None or pd.isna(value):
+            value_text = "기록 없음"
+        else:
+            value_text = f"{value}{f' {unit}' if unit else ''}"
+        lines.append(f"- {label}: {value_text}")
+    return "\n".join(lines)
+
+
+def post_trend_report_to_slack(
+    summary_lines: list[str],
+    full_analysis: str,
+    today_row: dict[str, Any],
+    metadata: dict[str, dict[str, Any]],
+) -> str:
+    app_url = slack_notify.get_app_url() or DEFAULT_APP_URL
+    summary_text = "\n".join(f"- {line}" for line in summary_lines[:3])
+    main_text = f"*Ligi Biometrics 최근 트렌드 분석*\n{summary_text}"
+    thread_text = f"{today_values_text(today_row, metadata)}\n\n*전체 분석*\n{full_analysis}"
+    return slack_notify.post_threaded_message(main_text, thread_text, link=app_url)
+
+
 def render_charts(df: pd.DataFrame) -> None:
     if df.empty:
         return
@@ -439,17 +472,41 @@ def main() -> None:
     if submitted:
         normalized_values = normalize_submitted_values(submitted_values, metadata)
         updated_df = upsert_today(df, today_iso, normalized_values)
-        save_data(updated_df)
-        st.success("오늘 기록을 저장했습니다.")
+        sheets_saved = save_data(updated_df)
+        if sheets_saved:
+            st.success("오늘 기록을 Google Sheets에 저장했습니다.")
+        else:
+            st.warning("오늘 기록을 로컬 CSV에는 저장했지만 Google Sheets 저장은 실패했습니다.")
+            with st.expander("Google Sheets 연결 진단", expanded=True):
+                for name, ok, detail in diagnose_sheets_connection():
+                    status = "OK" if ok else "FAIL"
+                    st.write(f"{status} - {name}: {detail}")
 
-        prompt_today, prompt_yesterday, prompt_recent = rows_for_prompt(updated_df, today_iso)
-        with st.spinner("한국어 분석을 생성하는 중입니다..."):
+        prompt_today, _prompt_yesterday, prompt_recent = rows_for_prompt(updated_df, today_iso)
+        with st.spinner("한국어 트렌드 분석을 생성하는 중입니다..."):
             try:
-                analysis = generate_analysis(prompt_today, prompt_yesterday, prompt_recent)
+                trend_report = generate_trend_report(prompt_today, prompt_recent)
             except Exception as exc:
-                analysis = f"분석 생성 중 오류가 발생했습니다: {exc}"
-        st.subheader("오늘의 분석")
+                trend_report = {
+                    "summary_lines": ["분석 생성 중 오류가 발생했습니다.", "저장된 데이터는 유지되었습니다.", str(exc)],
+                    "full_analysis": f"분석 생성 중 오류가 발생했습니다: {exc}",
+                }
+        analysis = trend_report["full_analysis"]
+        st.subheader("최근 트렌드 분석")
         st.markdown(analysis)
+        try:
+            slack_post_mode = post_trend_report_to_slack(
+                trend_report["summary_lines"],
+                trend_report["full_analysis"],
+                prompt_today,
+                metadata,
+            )
+            if slack_post_mode == "thread":
+                st.success("분석 요약과 상세 내용을 Slack thread로 전송했습니다.")
+            else:
+                st.success("분석 내용을 Slack으로 전송했습니다. thread 전송이 실패해 webhook으로 대체했습니다.")
+        except Exception as exc:
+            st.warning(f"Slack 전송에 실패했습니다: {exc}")
         df = updated_df
 
     with st.expander("Appendix: 추세", expanded=False):
