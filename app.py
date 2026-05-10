@@ -430,16 +430,23 @@ def today_values_text(today_row: dict[str, Any], metadata: dict[str, dict[str, A
     return "\n".join(lines)
 
 
+def escape_markdown_tildes(text: str) -> str:
+    return text.replace("~", r"\~")
+
+
 def post_trend_report_to_slack(
     summary_lines: list[str],
     full_analysis: str,
     today_row: dict[str, Any],
     metadata: dict[str, dict[str, Any]],
 ) -> str:
-    summary_text = "\n".join(f"- {line}" for line in summary_lines[:3])
+    summary_text = "\n".join(f"- {escape_markdown_tildes(line)}" for line in summary_lines[:3])
     main_text = f"*Ligi Biometrics 최근 트렌드 분석*\n{summary_text}"
-    thread_text = f"{today_values_text(today_row, metadata)}\n\n*전체 분석*\n{full_analysis}"
-    return slack_notify.post_threaded_message(main_text, thread_text)
+    thread_messages = [
+        today_values_text(today_row, metadata),
+        f"*전체 분석*\n{escape_markdown_tildes(full_analysis)}",
+    ]
+    return slack_notify.post_threaded_message(main_text, thread_messages)
 
 
 def render_charts(df: pd.DataFrame) -> None:
@@ -552,7 +559,7 @@ def main() -> None:
                 }
         analysis = trend_report["full_analysis"]
         st.subheader("최근 트렌드 분석")
-        st.markdown(analysis)
+        st.markdown(escape_markdown_tildes(analysis))
         try:
             slack_post_mode = post_trend_report_to_slack(
                 trend_report["summary_lines"],

@@ -109,7 +109,7 @@ def _post_slack_api(path: str, payload: dict[str, Any]) -> dict[str, Any]:
 
 def post_threaded_message(
     main_text: str,
-    thread_text: str,
+    thread_text: str | list[str],
     *,
     link: str | None = None,
     fallback_to_webhook: bool = False,
@@ -122,7 +122,8 @@ def post_threaded_message(
     """
     channel = get_channel_id()
     token = get_bot_token()
-    combined_text = f"{main_text}\n\n*상세 분석*\n{thread_text}"
+    thread_messages = [thread_text] if isinstance(thread_text, str) else thread_text
+    combined_text = "\n\n".join([main_text, *thread_messages])
     if not channel or not token:
         if not fallback_to_webhook:
             raise RuntimeError("SLACK_BOT_TOKEN and SLACK_CHANNEL_ID are required for threaded messages.")
@@ -149,16 +150,17 @@ def post_threaded_message(
     try:
         main_result = _post_slack_api("chat.postMessage", main_payload)
         thread_ts = main_result["ts"]
-        for chunk in _split_section_text(thread_text):
-            _post_slack_api(
-                "chat.postMessage",
-                {
-                    "channel": channel,
-                    "thread_ts": thread_ts,
-                    "text": chunk,
-                    "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": chunk}}],
-                },
-        )
+        for message in thread_messages:
+            for chunk in _split_section_text(message):
+                _post_slack_api(
+                    "chat.postMessage",
+                    {
+                        "channel": channel,
+                        "thread_ts": thread_ts,
+                        "text": chunk,
+                        "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": chunk}}],
+                    },
+                )
         return "thread"
     except Exception:
         if not fallback_to_webhook:
