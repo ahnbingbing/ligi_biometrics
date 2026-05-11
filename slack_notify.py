@@ -107,6 +107,26 @@ def _post_slack_api(path: str, payload: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError(f"Slack API connection error: {exc}") from exc
 
 
+def _post_slack_thread_chunk(channel: str, thread_ts: str, chunk: str) -> None:
+    payload = {
+        "channel": channel,
+        "thread_ts": thread_ts,
+        "text": chunk,
+        "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": chunk}}],
+    }
+    try:
+        _post_slack_api("chat.postMessage", payload)
+    except RuntimeError:
+        _post_slack_api(
+            "chat.postMessage",
+            {
+                "channel": channel,
+                "thread_ts": thread_ts,
+                "text": chunk,
+            },
+        )
+
+
 def post_threaded_message(
     main_text: str,
     thread_text: str | list[str],
@@ -152,15 +172,7 @@ def post_threaded_message(
         thread_ts = main_result["ts"]
         for message in thread_messages:
             for chunk in _split_section_text(message):
-                _post_slack_api(
-                    "chat.postMessage",
-                    {
-                        "channel": channel,
-                        "thread_ts": thread_ts,
-                        "text": chunk,
-                        "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": chunk}}],
-                    },
-                )
+                _post_slack_thread_chunk(channel, thread_ts, chunk)
         return "thread"
     except Exception:
         if not fallback_to_webhook:

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -27,63 +28,74 @@ TODAY_REMINDER_PATH = DATA_DIR / "today_reminder.txt"
 LATEST_ANALYSIS_PATH = DATA_DIR / "latest_analysis.md"
 
 DATE_COLUMN = "date"
+APP_TIMEZONE = "Asia/Seoul"
 FIELD_ORDER = [
-    "weight_kg",
-    "sleep_quality",
-    "sleep_hours",
     "alcohol_intake",
-    "salty_carb_heavy_meal",
-    "allergy_histamine_score",
-    "bowel_status",
+    "salty_food_intake",
+    "carb_overeating",
+    "fermented_allergy_food",
+    "protein_sufficiency",
+    "overeating_level",
+    "late_night_meal",
+    "eating_out_processed_food",
     "exercise",
-    "non_exercise_kcal",
-    "bloating_swelling",
-    "gas_distension",
+    "activity_kcal",
+    "late_caffeine",
+    "schedule_load",
     "stress_level",
-    "overall_condition",
-    "night_sweat_score",
-    "notes",
+    "previous_bowel_status",
+    "dry_red_eyes",
+    "weight_kg",
+    "face_swelling",
+    "hand_foot_swelling",
+    "hand_foot_numbness",
+    "abdominal_bloating",
+    "gas_distension",
+    "bad_breath",
+    "allergy_reaction",
+    "dryness_eye_mouth_skin",
+    "skin_condition",
+    "sleep_hours",
+    "sleep_quality",
+    "fatigue_brain_fog",
 ]
 COLUMNS = [DATE_COLUMN, *FIELD_ORDER]
 
-CATEGORIES = {
-    "핵심 지표": ["weight_kg", "overall_condition"],
-    "수면/회복": ["sleep_quality", "sleep_hours", "night_sweat_score", "stress_level"],
-    "식사/알코올": ["alcohol_intake", "salty_carb_heavy_meal"],
-    "알레르기/소화": [
-        "allergy_histamine_score",
-        "bowel_status",
-        "bloating_swelling",
-        "gas_distension",
-    ],
-    "운동": ["exercise", "non_exercise_kcal"],
-    "메모": ["notes"],
-}
+CAUSE_FIELD_ORDER = FIELD_ORDER[:15]
+RESULT_FIELD_ORDER = FIELD_ORDER[15:]
 
 LEGACY_COLUMN_ALIASES = {
-    "exercise_kcal": "non_exercise_kcal",
+    "exercise_kcal": "activity_kcal",
+    "non_exercise_kcal": "activity_kcal",
+    "salty_carb_heavy_meal": "salty_food_intake",
+    "allergy_histamine_score": "allergy_reaction",
+    "bowel_status": "previous_bowel_status",
+    "bloating_swelling": "face_swelling",
+    "overall_condition": "fatigue_brain_fog",
 }
 
 DAILY_ANALYSIS_SYSTEM_PROMPT = (
-    "You are a Korean biometric analysis assistant. You analyze daily body-weight "
-    "changes as a dynamic system, not as a simple calorie model. You are not a "
-    "doctor and must not diagnose disease. You separate possible causes into "
-    "water retention, gut content, gas/distension, alcohol recovery load, sleep "
-    "recovery, allergy/histamine response, exercise adaptation, and stress. Be "
-    "concise, concrete, and consistent across days."
+    "You are a Korean biometric analysis assistant. You analyze the relationship "
+    "between previous-day causes and today's physical outcomes as a dynamic "
+    "system, not as a simple calorie model. You are not a doctor and must not "
+    "diagnose disease. Separate water retention, gut content, gas/distension, "
+    "histamine/allergy load, sleep recovery, exercise adaptation, caffeine, "
+    "stress, schedule load, bowel status, and dryness signals. Be concise, "
+    "concrete, and consistent across days."
 )
 
 DAILY_ANALYSIS_USER_PROMPT_TEMPLATE = """Analyze today's biometric data.
 
 Rules:
 - Answer in Korean.
-- Compare today with yesterday.
-- Separate bloating/swelling from gas/distension.
+- Compare today's outcomes with recent rows.
+- Treat the first group as previous-day causes and the second group as today's outcomes.
+- Separate face swelling, hand/foot swelling, abdominal bloating, and gas.
 - Do not overclaim fat gain from one day of data.
-- If alcohol + salty/carb-heavy meal + bloating are high, interpret as likely water/glycogen retention.
-- If gas_distension is high, interpret separately as gut fermentation or bowel-state signal.
-- If night_sweat_score is high, interpret as possible recovery/discharge signal.
-- If allergy_histamine_score is high, consider inflammation/water retention.
+- If alcohol, salty food, carbs, eating out/processed food, or overeating are high, interpret weight/swelling as likely water/glycogen/gut-content load.
+- If fermented/allergy food, allergy reaction, dry/red eyes, or dryness are high, consider histamine/allergy and dehydration signals.
+- If gas_distension or abdominal_bloating is high, interpret separately as fermentation, bowel state, or gut-content signal.
+- If sleep quality is low or fatigue/brain fog is high, discuss recovery load.
 - Mention uncertainty clearly.
 - End with tomorrow's likely direction.
 
@@ -99,21 +111,22 @@ RECENT_14_ROWS:
 
 Output format:
 1. 오늘 상태 한 줄 요약
-2. 어제 대비 변화
+2. 전날 원인 → 오늘 결과 연결
 3. 체중 변화의 가능 원인 분해
-4. 수분/붓기 vs 장가스 분리
-5. 회복 상태
+4. 얼굴/손발 붓기 vs 복부팽만/장가스 분리
+5. 회복/수면/피로 상태
 6. 내일 예상 흐름
 7. 오늘의 한 가지 조정 포인트
 """
 
 TREND_ANALYSIS_SYSTEM_PROMPT = (
     "You are a Korean biometric trend analysis assistant. You analyze recent "
-    "body-weight and recovery data as a dynamic system, not as a simple calorie "
-    "model. You are not a doctor and must not diagnose disease. Separate possible "
-    "causes into water retention, gut content, gas/distension, alcohol recovery "
-    "load, sleep recovery, allergy/histamine response, exercise adaptation, and "
-    "stress. Be concise, concrete, and consistent."
+    "previous-day cause inputs and next-morning outcome data as a dynamic system, "
+    "not as a simple calorie model. You are not a doctor and must not diagnose "
+    "disease. Separate water retention, gut content, gas/distension, allergy/"
+    "histamine load, sleep recovery, exercise adaptation, caffeine, stress, "
+    "schedule load, bowel status, and dryness signals. Be concise, concrete, "
+    "and consistent."
 )
 
 TREND_ANALYSIS_USER_PROMPT_TEMPLATE = """Analyze recent biometric trend data.
@@ -121,7 +134,8 @@ TREND_ANALYSIS_USER_PROMPT_TEMPLATE = """Analyze recent biometric trend data.
 Rules:
 - Answer in Korean.
 - Focus on recent direction, repeated patterns, and likely drivers.
-- Separate bloating/swelling from gas/distension.
+- Treat previous-day causes and today's outcomes as paired signals within each row.
+- Separate face/hand-foot swelling from abdominal bloating/gas.
 - Do not overclaim fat gain or fat loss from short-term weight movement.
 - Mention uncertainty clearly.
 - Give practical next-step guidance.
@@ -133,9 +147,9 @@ RECENT_ROWS:
 Output format:
 1. 최근 흐름 요약
 2. 체중 변동 패턴
-3. 반복되는 가능 원인
-4. 수분/붓기 vs 장가스 분리
-5. 회복/스트레스/운동 적응
+3. 반복되는 전날 원인
+4. 붓기 vs 복부팽만/장가스 분리
+5. 수면/피로/스트레스/운동 적응
 6. 다음 2-3일 관찰 포인트
 7. 한 가지 우선 조정
 """
@@ -148,7 +162,9 @@ Rules:
 - `summary_lines` must contain exactly 3 short lines suitable for a Slack main message.
 - `full_analysis` can be longer, but keep it practical and concise.
 - In `full_analysis`, focus on recent direction, repeated patterns, and likely drivers.
-- Separate bloating/swelling from gas/distension.
+- Treat previous-day causes and today's outcomes as paired signals within each row.
+- Separate face/hand-foot swelling from abdominal bloating/gas.
+- Explicitly connect the strongest previous-day causes to today's results.
 - Do not overclaim fat gain or fat loss from short-term weight movement.
 - Mention uncertainty clearly.
 
@@ -174,6 +190,11 @@ def load_metadata() -> dict[str, dict[str, Any]]:
     if missing:
         raise ValueError(f"metadata.json is missing fields: {', '.join(missing)}")
     return metadata
+
+
+def current_date_iso(timezone_name: str = APP_TIMEZONE) -> str:
+    """Return today's ISO date in the app's canonical timezone."""
+    return datetime.now(ZoneInfo(timezone_name)).date().isoformat()
 
 
 def create_empty_dataframe() -> pd.DataFrame:
@@ -304,18 +325,6 @@ def get_latest_previous_row(df: pd.DataFrame, today_iso: str | None = None) -> d
     if previous.empty:
         return None
     return previous.iloc[-1].to_dict()
-
-
-def default_for_field(
-    field_name: str,
-    field_meta: dict[str, Any],
-    today_row: dict[str, Any] | None,
-    yesterday_row: dict[str, Any] | None,
-) -> Any:
-    for source in (today_row, yesterday_row):
-        if source and field_name in source and not pd.isna(source[field_name]):
-            return source[field_name]
-    return field_meta.get("default")
 
 
 def upsert_today(df: pd.DataFrame, today_iso: str, row: dict[str, Any]) -> pd.DataFrame:

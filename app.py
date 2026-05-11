@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import date
 from typing import Any
 
 import altair as alt
@@ -9,9 +8,11 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from biometrics_core import (
+    CAUSE_FIELD_ORDER,
     DATE_COLUMN,
     FIELD_ORDER,
-    default_for_field,
+    RESULT_FIELD_ORDER,
+    current_date_iso,
     diagnose_sheets_connection,
     generate_trend_report,
     get_latest_previous_row,
@@ -26,7 +27,8 @@ import slack_notify
 
 
 DEFAULT_APP_URL = "https://ligibiometrics.streamlit.app/"
-VISIBLE_FIELD_ORDER = [field_name for field_name in FIELD_ORDER if field_name != "notes"]
+CAUSE_DRAFT_KEY = "cause_values"
+PAGE_KEY = "entry_page"
 
 
 def apply_compact_styles() -> None:
@@ -80,6 +82,13 @@ def apply_compact_styles() -> None:
         h2, h3 {
             font-size: 1rem !important;
             margin-top: 0.8rem !important;
+        }
+        .section-title {
+            color: var(--ligi-title);
+            font-size: clamp(1.25rem, 2.6vw, 1.65rem);
+            font-weight: 840;
+            line-height: 1.18;
+            margin: 0 0 clamp(1.05rem, 2.2vw, 1.45rem);
         }
         .app-header {
             margin: 0 0 1.1rem;
@@ -337,24 +346,36 @@ def previous_value_text(
     return f"{previous_text}{unit_suffix}"
 
 
+def stored_or_default_value(
+    field_name: str,
+    field_meta: dict[str, Any],
+    stored_row: dict[str, Any] | None,
+) -> Any:
+    if stored_row and field_name in stored_row and not pd.isna(stored_row[field_name]):
+        return stored_row[field_name]
+    return field_meta.get("default")
+
+
 def render_form_fields(
     metadata: dict[str, dict[str, Any]],
-    today_row: dict[str, Any] | None,
-    yesterday_row: dict[str, Any] | None,
+    field_order: list[str],
+    stored_row: dict[str, Any] | None,
+    previous_row: dict[str, Any] | None,
+    key_prefix: str,
 ) -> dict[str, Any]:
     submitted_values: dict[str, Any] = {}
 
-    for field_name in VISIBLE_FIELD_ORDER:
+    for field_name in field_order:
         field_meta = metadata[field_name]
-        default_value = default_for_field(field_name, field_meta, today_row, yesterday_row)
-        previous_text = previous_value_text(field_name, field_meta, yesterday_row)
+        default_value = stored_or_default_value(field_name, field_meta, stored_row)
+        previous_text = previous_value_text(field_name, field_meta, previous_row)
         label_col, input_col, prev_col = st.columns([1.62, 0.72, 0.98], gap="small", vertical_alignment="center")
 
         with label_col:
             st.markdown(f"<div class='field-label'>{field_meta['label_ko']}</div>", unsafe_allow_html=True)
 
         with input_col:
-            submitted_values[field_name] = render_input(field_name, field_meta, default_value)
+            submitted_values[field_name] = render_input(field_name, field_meta, default_value, key_prefix)
 
         with prev_col:
             st.markdown(
@@ -366,7 +387,7 @@ def render_form_fields(
     return submitted_values
 
 
-def render_input(field_name: str, field_meta: dict[str, Any], default_value: Any) -> Any:
+def render_input(field_name: str, field_meta: dict[str, Any], default_value: Any, key_prefix: str) -> Any:
     label = field_meta["label_ko"]
     help_text = field_meta.get("anchor_ko", "")
 
@@ -375,21 +396,18 @@ def render_input(field_name: str, field_meta: dict[str, Any], default_value: Any
         value=format_default_value(default_value, field_meta),
         help=help_text,
         label_visibility="collapsed",
-        key=field_name,
+        key=f"{key_prefix}_{field_name}",
     )
 
 
 def format_default_value(value: Any, field_meta: dict[str, Any]) -> str:
     if value is None or pd.isna(value):
         return ""
-    if field_meta["type"] not in {"number", "slider"}:
+    if field_meta["type"] not in {"number", "slider", "score"}:
         return str(value)
 
     numeric_value = coerce_numeric(value, float(field_meta.get("default", 0)))
-    step = float(field_meta.get("step") or 1)
-    if step < 1:
-        return f"{numeric_value:.2f}"
-    return str(int(numeric_value)) if numeric_value.is_integer() else str(numeric_value)
+    return f"{numeric_value:.1f}"
 
 
 def normalize_submitted_values(
@@ -399,7 +417,7 @@ def normalize_submitted_values(
     normalized: dict[str, Any] = {}
     for field_name, value in values.items():
         field_meta = metadata[field_name]
-        if field_meta["type"] not in {"number", "slider"}:
+        if field_meta["type"] not in {"number", "slider", "score"}:
             normalized[field_name] = value
             continue
 
@@ -411,17 +429,39 @@ def normalize_submitted_values(
             numeric_value = max(float(min_value), numeric_value)
         if max_value is not None:
             numeric_value = min(float(max_value), numeric_value)
-        normalized[field_name] = numeric_value
+        normalized[field_name] = round(numeric_value, 1)
     return normalized
 
 
 def today_values_text(today_row: dict[str, Any], metadata: dict[str, dict[str, Any]]) -> str:
     lines = ["*오늘 입력값*"]
-    for field_name in VISIBLE_FIELD_ORDER:
+    for title, field_order in (("전날 원인", CAUSE_FIELD_ORDER), ("오늘 결과", RESULT_FIELD_ORDER)):
+        lines.append(f"*{title}*")
+        for field_name in field_order:
+            field_meta = metadata[field_name]
+            label = field_meta["label_ko"]
+            unit = field_meta.get("unit", "")
+            value = today_row.get(field_name)
+            if value is None or pd.isna(value):
+                value_text = "기록 없음"
+            else:
+                value_text = f"{value}{f' {unit}' if unit else ''}"
+            lines.append(f"- {label}: {value_text}")
+    return "\n".join(lines)
+
+
+def field_group_text(
+    title: str,
+    field_order: list[str],
+    row: dict[str, Any],
+    metadata: dict[str, dict[str, Any]],
+) -> str:
+    lines = [f"**{title}**"]
+    for field_name in field_order:
         field_meta = metadata[field_name]
         label = field_meta["label_ko"]
         unit = field_meta.get("unit", "")
-        value = today_row.get(field_name)
+        value = row.get(field_name)
         if value is None or pd.isna(value):
             value_text = "기록 없음"
         else:
@@ -439,6 +479,8 @@ def post_trend_report_to_slack(
     full_analysis: str,
     today_row: dict[str, Any],
     metadata: dict[str, dict[str, Any]],
+    *,
+    link: str | None = DEFAULT_APP_URL,
 ) -> str:
     summary_text = "\n".join(f"- {escape_markdown_tildes(line)}" for line in summary_lines[:3])
     main_text = f"*Ligi Biometrics 최근 트렌드 분석*\n{summary_text}"
@@ -446,7 +488,12 @@ def post_trend_report_to_slack(
         today_values_text(today_row, metadata),
         f"*전체 분석*\n{escape_markdown_tildes(full_analysis)}",
     ]
-    return slack_notify.post_threaded_message(main_text, thread_messages)
+    return slack_notify.post_threaded_message(
+        main_text,
+        thread_messages,
+        link=link,
+        fallback_to_webhook=True,
+    )
 
 
 def render_charts(df: pd.DataFrame) -> None:
@@ -459,7 +506,15 @@ def render_charts(df: pd.DataFrame) -> None:
     if chart_df.empty:
         return
 
-    numeric_columns = ["weight_kg", "bloating_swelling", "gas_distension"]
+    numeric_columns = [
+        "weight_kg",
+        "face_swelling",
+        "hand_foot_swelling",
+        "abdominal_bloating",
+        "gas_distension",
+        "fatigue_brain_fog",
+        "sleep_quality",
+    ]
     for column in numeric_columns:
         chart_df[column] = pd.to_numeric(chart_df[column], errors="coerce")
 
@@ -470,14 +525,25 @@ def render_charts(df: pd.DataFrame) -> None:
     plot_df = chart_df.reset_index()
     symptom_df = plot_df.melt(
         id_vars=[DATE_COLUMN],
-        value_vars=["bloating_swelling", "gas_distension"],
+        value_vars=[
+            "face_swelling",
+            "hand_foot_swelling",
+            "abdominal_bloating",
+            "gas_distension",
+            "fatigue_brain_fog",
+            "sleep_quality",
+        ],
         var_name="metric",
         value_name="value",
     ).dropna(subset=["value"])
     symptom_df["metric"] = symptom_df["metric"].map(
         {
-            "bloating_swelling": "붓기/수분감",
-            "gas_distension": "장가스/팽만",
+            "face_swelling": "얼굴 붓기",
+            "hand_foot_swelling": "손발 붓기",
+            "abdominal_bloating": "복부 팽만",
+            "gas_distension": "장가스",
+            "fatigue_brain_fog": "피로감/멍함",
+            "sleep_quality": "수면 질",
         }
     )
 
@@ -518,6 +584,155 @@ def render_charts(df: pd.DataFrame) -> None:
         st.altair_chart(chart, use_container_width=True)
 
 
+def render_step_heading(title: str) -> None:
+    st.markdown(f"<div class='section-title'>{title}</div>", unsafe_allow_html=True)
+
+
+def render_cause_page(
+    metadata: dict[str, dict[str, Any]],
+    today_row: dict[str, Any] | None,
+    previous_row: dict[str, Any] | None,
+) -> None:
+    render_step_heading("전날 원인 입력")
+    with st.form("cause_form"):
+        cause_values = render_form_fields(
+            metadata,
+            CAUSE_FIELD_ORDER,
+            today_row,
+            previous_row,
+            "cause",
+        )
+        next_clicked = st.form_submit_button("다음으로", type="primary")
+
+    if next_clicked:
+        st.session_state[CAUSE_DRAFT_KEY] = normalize_submitted_values(cause_values, metadata)
+        st.session_state[PAGE_KEY] = "results"
+        st.rerun()
+
+
+def render_result_input_page(
+    metadata: dict[str, dict[str, Any]],
+    today_row: dict[str, Any] | None,
+    previous_row: dict[str, Any] | None,
+    df: pd.DataFrame,
+    today_iso: str,
+) -> pd.DataFrame:
+    render_step_heading("오늘 결과 입력")
+    _spacer_col, back_col = st.columns([1, 0.48])
+    with back_col:
+        if st.button("전날 원인으로 돌아가기"):
+            st.session_state[PAGE_KEY] = "causes"
+            st.rerun()
+
+    cause_values = st.session_state.get(CAUSE_DRAFT_KEY)
+    if cause_values is None:
+        cause_values = {
+            field_name: stored_or_default_value(field_name, metadata[field_name], today_row)
+            for field_name in CAUSE_FIELD_ORDER
+        }
+        st.session_state[CAUSE_DRAFT_KEY] = cause_values
+
+    with st.form("result_form"):
+        result_values = render_form_fields(
+            metadata,
+            RESULT_FIELD_ORDER,
+            today_row,
+            previous_row,
+            "result",
+        )
+        submitted = st.form_submit_button("저장하고 분석하기", type="primary")
+
+    if not submitted:
+        return df
+
+    normalized_results = normalize_submitted_values(result_values, metadata)
+    row_values = {**cause_values, **normalized_results}
+    updated_df = upsert_today(df, today_iso, row_values)
+    sheets_saved = save_data(updated_df)
+    if sheets_saved:
+        st.success("오늘 기록을 Google Sheets에 저장했습니다.")
+    else:
+        st.warning("오늘 기록을 로컬 CSV에는 저장했지만 Google Sheets 저장은 실패했습니다.")
+        with st.expander("Google Sheets 연결 진단", expanded=True):
+            for name, ok, detail in diagnose_sheets_connection():
+                status = "OK" if ok else "FAIL"
+                st.write(f"{status} - {name}: {detail}")
+
+    prompt_today, _prompt_yesterday, prompt_recent = rows_for_prompt(updated_df, today_iso)
+    with st.spinner("한국어 트렌드 분석을 생성하는 중입니다..."):
+        try:
+            trend_report = generate_trend_report(prompt_today, prompt_recent)
+        except Exception as exc:
+            trend_report = {
+                "summary_lines": ["분석 생성 중 오류가 발생했습니다.", "저장된 데이터는 유지되었습니다.", str(exc)],
+                "full_analysis": f"분석 생성 중 오류가 발생했습니다: {exc}",
+            }
+
+    st.session_state["latest_trend_report"] = trend_report
+    st.session_state["latest_saved_row"] = prompt_today
+    st.session_state["latest_df"] = updated_df
+    st.session_state[PAGE_KEY] = "analysis"
+    try:
+        slack_post_mode = post_trend_report_to_slack(
+            trend_report["summary_lines"],
+            trend_report["full_analysis"],
+            prompt_today,
+            metadata,
+            link=DEFAULT_APP_URL,
+        )
+        st.session_state["latest_slack_post_mode"] = slack_post_mode
+    except Exception as exc:
+        st.session_state["latest_slack_error"] = str(exc)
+    st.rerun()
+
+
+def render_analysis_page(
+    metadata: dict[str, dict[str, Any]],
+    df: pd.DataFrame,
+) -> None:
+    render_step_heading("전체 저장 분석 결과 및 추세")
+    report = st.session_state.get("latest_trend_report")
+    saved_row = st.session_state.get("latest_saved_row")
+
+    if report:
+        st.subheader("최근 트렌드 분석")
+        summary_lines = report.get("summary_lines", [])[:3]
+        if summary_lines:
+            st.markdown("\n".join(f"- {escape_markdown_tildes(line)}" for line in summary_lines))
+        st.markdown(escape_markdown_tildes(report["full_analysis"]))
+
+    if saved_row:
+        st.markdown(field_group_text("전날 원인", CAUSE_FIELD_ORDER, saved_row, metadata))
+        st.markdown(field_group_text("오늘 결과", RESULT_FIELD_ORDER, saved_row, metadata))
+
+    slack_mode = st.session_state.pop("latest_slack_post_mode", None)
+    slack_error = st.session_state.pop("latest_slack_error", None)
+    if slack_mode == "thread":
+        st.success("분석 요약과 상세 내용을 Slack thread로 전송했습니다.")
+    elif slack_mode == "webhook":
+        st.warning(
+            "Slack thread 권한이 없어 입력값과 전체 분석을 단일 Slack 메시지로 전송했습니다. "
+            "thread 전송에는 SLACK_BOT_TOKEN과 SLACK_CHANNEL_ID가 필요합니다."
+        )
+    elif slack_error:
+        st.warning(f"Slack 전송에 실패했습니다: {slack_error}")
+
+    st.subheader("추세 그래프")
+    render_charts(df)
+
+    with st.expander("최근 14일 데이터", expanded=False):
+        st.dataframe(df.sort_values(DATE_COLUMN, ascending=False).head(14), use_container_width=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("오늘 기록 수정"):
+            st.session_state[PAGE_KEY] = "causes"
+            st.rerun()
+    with col2:
+        if st.button("결과 다시 보기"):
+            st.rerun()
+
+
 def main() -> None:
     st.set_page_config(page_title="Ligi Biometrics", page_icon="LB", layout="wide")
     apply_compact_styles()
@@ -525,61 +740,19 @@ def main() -> None:
 
     metadata = load_metadata()
     df = load_data()
-    today_iso = date.today().isoformat()
+    today_iso = current_date_iso()
     today_row = get_today_row(df, today_iso)
     yesterday_row = get_latest_previous_row(df, today_iso)
 
     render_header(today_iso)
 
-    with st.form("biometrics_form"):
-        submitted_values = render_form_fields(metadata, today_row, yesterday_row)
-        submitted = st.form_submit_button("저장하고 분석하기", type="primary")
-
-    if submitted:
-        normalized_values = normalize_submitted_values(submitted_values, metadata)
-        updated_df = upsert_today(df, today_iso, normalized_values)
-        sheets_saved = save_data(updated_df)
-        if sheets_saved:
-            st.success("오늘 기록을 Google Sheets에 저장했습니다.")
-        else:
-            st.warning("오늘 기록을 로컬 CSV에는 저장했지만 Google Sheets 저장은 실패했습니다.")
-            with st.expander("Google Sheets 연결 진단", expanded=True):
-                for name, ok, detail in diagnose_sheets_connection():
-                    status = "OK" if ok else "FAIL"
-                    st.write(f"{status} - {name}: {detail}")
-
-        prompt_today, _prompt_yesterday, prompt_recent = rows_for_prompt(updated_df, today_iso)
-        with st.spinner("한국어 트렌드 분석을 생성하는 중입니다..."):
-            try:
-                trend_report = generate_trend_report(prompt_today, prompt_recent)
-            except Exception as exc:
-                trend_report = {
-                    "summary_lines": ["분석 생성 중 오류가 발생했습니다.", "저장된 데이터는 유지되었습니다.", str(exc)],
-                    "full_analysis": f"분석 생성 중 오류가 발생했습니다: {exc}",
-                }
-        analysis = trend_report["full_analysis"]
-        st.subheader("최근 트렌드 분석")
-        st.markdown(escape_markdown_tildes(analysis))
-        try:
-            slack_post_mode = post_trend_report_to_slack(
-                trend_report["summary_lines"],
-                trend_report["full_analysis"],
-                prompt_today,
-                metadata,
-            )
-            if slack_post_mode == "thread":
-                st.success("분석 요약과 상세 내용을 Slack thread로 전송했습니다.")
-            else:
-                st.success("분석 내용을 Slack으로 전송했습니다.")
-        except Exception as exc:
-            st.warning(f"Slack 전송에 실패했습니다: {exc}")
-        df = updated_df
-
-    with st.expander("Appendix: 추세", expanded=False):
-        render_charts(df)
-
-    with st.expander("Appendix: 최근 14일 데이터", expanded=False):
-        st.dataframe(df.sort_values(DATE_COLUMN, ascending=False).head(14), use_container_width=True)
+    page = st.session_state.setdefault(PAGE_KEY, "causes")
+    if page == "results":
+        render_result_input_page(metadata, today_row, yesterday_row, df, today_iso)
+    elif page == "analysis":
+        render_analysis_page(metadata, st.session_state.get("latest_df", df))
+    else:
+        render_cause_page(metadata, today_row, yesterday_row)
 
 
 if __name__ == "__main__":

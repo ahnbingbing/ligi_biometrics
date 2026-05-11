@@ -3,10 +3,10 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from datetime import date
 
 from biometrics_core import (
     TODAY_REMINDER_PATH,
+    current_date_iso,
     generate_reminder_message,
     get_latest_previous_row,
     load_data,
@@ -47,7 +47,7 @@ def main() -> None:
     args = parse_args()
     metadata = load_metadata()
     df = load_data()
-    today_iso = date.today().isoformat()
+    today_iso = current_date_iso()
     previous_row = get_latest_previous_row(df, today_iso)
     message = generate_reminder_message(metadata, previous_row, today_iso)
 

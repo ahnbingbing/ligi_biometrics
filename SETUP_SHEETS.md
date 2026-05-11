@@ -22,7 +22,7 @@ GitHub CSV 저장 방식에서 **Google Sheets 저장 + GitHub Actions로 매일
 3. 첫 번째 행에 헤더를 추가 (한 셀에 한 컬럼명):
 
    ```
-   date | weight_kg | sleep_quality | sleep_hours | alcohol_intake | salty_carb_heavy_meal | allergy_histamine_score | bowel_status | exercise | non_exercise_kcal | bloating_swelling | gas_distension | stress_level | overall_condition | night_sweat_score | notes
+   date | alcohol_intake | salty_food_intake | carb_overeating | fermented_allergy_food | protein_sufficiency | overeating_level | late_night_meal | eating_out_processed_food | exercise | activity_kcal | late_caffeine | schedule_load | stress_level | previous_bowel_status | dry_red_eyes | weight_kg | face_swelling | hand_foot_swelling | hand_foot_numbness | abdominal_bloating | gas_distension | bad_breath | allergy_reaction | dryness_eye_mouth_skin | skin_condition | sleep_hours | sleep_quality | fatigue_brain_fog
    ```
 
    (헤더는 마이그레이션 스크립트가 자동으로 만들어주니 비워둬도 됩니다.)
@@ -80,6 +80,11 @@ Streamlit Community Cloud 대시보드 → 앱 선택 → **Settings → Secrets
 ```toml
 sheet_id = "여기에_1단계의_SHEET_ID"
 worksheet_name = "Sheet1"
+slack_webhook_url = "https://hooks.slack.com/services/..."
+
+# 앱 저장 후 분석 상세를 Slack thread로 보내려면 필요
+slack_bot_token = "xoxb-..."
+slack_channel_id = "C..."
 
 # 2단계에서 다운로드한 JSON의 내용을 그대로 옮김
 [gcp_service_account]
@@ -129,6 +134,8 @@ SHEET_ID=여기에_SHEET_ID
 WORKSHEET_NAME=Sheet1
 GOOGLE_APPLICATION_CREDENTIALS=/절대경로/service_account.json
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+SLACK_BOT_TOKEN=xoxb-...
+SLACK_CHANNEL_ID=C...
 
 # GitHub 관련 환경변수 (GITHUB_TOKEN 등)는 더 이상 필요 없음 — 삭제해도 OK
 ```

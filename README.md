@@ -69,10 +69,13 @@ The script is idempotent — re-running it won't duplicate dates already present
 
 ## Behavior
 
-- Form is built dynamically from `data/metadata.json` (15 fields across 6 categories).
-- Each field shows the previous day's value and a Korean anchor description for calibration.
+- The app has three screens: previous-day causes, today's outcomes, then saved analysis and trend charts.
+- Form fields are built dynamically from `data/metadata.json` (28 fields: 15 cause inputs and 13 result inputs).
+- Each field shows the previous row's value and a Korean anchor description for calibration.
 - Submission upserts today's row by date.
+- The app uses Asia/Seoul as the canonical date, so Streamlit Cloud's server timezone does not overwrite the previous KST day.
 - All persistence goes to Google Sheets via `gspread` (`sheets_storage.py`); a local CSV at `data/biometrics.csv` is kept as a cache.
 - Today's row + yesterday's row + recent 14 rows are sent to the OpenAI API for Korean analysis (gpt-4.1-mini by default).
+- Slack trend details are posted as thread replies when `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID` are configured; otherwise they fall back to one combined webhook message.
 - Streamlit renders trend charts (weight, bloating vs gas) and a recent-data expander.
 - Scheduled work (daily reminder, optional batch analysis) runs in GitHub Actions, not in the Streamlit process.
