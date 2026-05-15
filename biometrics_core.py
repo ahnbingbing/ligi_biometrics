@@ -57,12 +57,50 @@ FIELD_ORDER = [
     "skin_condition",
     "sleep_hours",
     "sleep_quality",
+    "night_sweat_score",
     "fatigue_brain_fog",
+    "notes",
 ]
 COLUMNS = [DATE_COLUMN, *FIELD_ORDER]
 
-CAUSE_FIELD_ORDER = FIELD_ORDER[:15]
-RESULT_FIELD_ORDER = FIELD_ORDER[15:]
+NOTES_FIELD_ORDER = ["notes"]
+CAUSE_FIELD_ORDER = [*FIELD_ORDER[:15], *NOTES_FIELD_ORDER]
+RESULT_FIELD_ORDER = FIELD_ORDER[15:29]
+
+OUTCOME_METRIC_FIELDS = [
+    "weight_kg",
+    "face_swelling",
+    "hand_foot_swelling",
+    "abdominal_bloating",
+    "gas_distension",
+    "fatigue_brain_fog",
+    "sleep_quality",
+    "night_sweat_score",
+]
+
+LAG_INPUT_METRIC_FIELDS = [
+    "alcohol_intake",
+    "salty_food_intake",
+    "carb_overeating",
+    "fermented_allergy_food",
+    "previous_bowel_status",
+    "activity_kcal",
+    "exercise",
+    "stress_level",
+    "sleep_hours",
+    "sleep_quality",
+    "night_sweat_score",
+    "notes",
+]
+
+PROMPT_FIELD_ALIASES = {
+    "salty_carb_heavy_meal": ["salty_food_intake", "carb_overeating"],
+    "allergy_histamine_score": ["fermented_allergy_food", "allergy_reaction"],
+    "bowel_status": "previous_bowel_status",
+    "exercise_kcal": "activity_kcal",
+    "bloating_swelling": ["face_swelling", "hand_foot_swelling", "abdominal_bloating"],
+    "overall_condition": "fatigue_brain_fog",
+}
 
 LEGACY_COLUMN_ALIASES = {
     "exercise_kcal": "activity_kcal",
@@ -88,35 +126,55 @@ DAILY_ANALYSIS_USER_PROMPT_TEMPLATE = """Analyze today's biometric data.
 
 Rules:
 - Answer in Korean.
-- Compare today's outcomes with recent rows.
-- Treat the first group as previous-day causes and the second group as today's outcomes.
-- Separate face swelling, hand/foot swelling, abdominal bloating, and gas.
+- Interpret today's outcome metrics as lagged outcomes of the previous day's input metrics.
+- Use TODAY_OUTCOMES as today's results, and LAGGED_YESTERDAY_INPUTS as the possible prior-day drivers.
+- Compare today's outcomes with recent 3-day and 7-day lagged pairs when available.
+- Separate water retention, gut content/gas, alcohol recovery load, sleep recovery, allergy/histamine, and exercise adaptation.
+- Separate face swelling, hand/foot swelling, abdominal bloating, and gas when the fields are available.
 - Do not overclaim fat gain from one day of data.
 - If alcohol, salty food, carbs, eating out/processed food, or overeating are high, interpret weight/swelling as likely water/glycogen/gut-content load.
 - If fermented/allergy food, allergy reaction, dry/red eyes, or dryness are high, consider histamine/allergy and dehydration signals.
 - If gas_distension or abdominal_bloating is high, interpret separately as fermentation, bowel state, or gut-content signal.
 - If sleep quality is low or fatigue/brain fog is high, discuss recovery load.
-- Mention uncertainty clearly.
-- End with tomorrow's likely direction.
+- Mention uncertainty clearly and use probabilistic language.
+- Keep it concise but useful.
 
 Input:
-TODAY_ROW:
-{today_row}
+FIELD_ALIASES:
+{field_aliases}
 
-YESTERDAY_ROW:
-{yesterday_row}
+TODAY_OUTCOMES:
+{today_outcomes}
+
+LAGGED_YESTERDAY_INPUTS:
+{lagged_yesterday_inputs}
+
+RECENT_LAGGED_PAIRS:
+{lagged_pairs}
 
 RECENT_14_ROWS:
 {recent_rows}
 
 Output format:
-1. 오늘 상태 한 줄 요약
-2. 전날 원인 → 오늘 결과 연결
-3. 체중 변화의 가능 원인 분해
-4. 얼굴/손발 붓기 vs 복부팽만/장가스 분리
-5. 회복/수면/피로 상태
+1. 오늘 상태 요약
+2. 어제 입력값이 오늘 결과에 준 가능 영향
+3. 체중 변화 분해
+   - water retention
+   - gut content / gas
+   - alcohol recovery load
+   - sleep recovery
+   - allergy / histamine
+   - exercise adaptation
+4. 현재 추세
+   - 최근 3일
+   - 최근 7일 if available
+5. 오늘의 제안
+   - dinner recommendation
+   - exercise timing
+   - alcohol caution
+   - sleep target
+   - gut / bloating care
 6. 내일 예상 흐름
-7. 오늘의 한 가지 조정 포인트
 """
 
 TREND_ANALYSIS_SYSTEM_PROMPT = (
@@ -134,15 +192,18 @@ TREND_ANALYSIS_USER_PROMPT_TEMPLATE = """Analyze recent biometric trend data.
 Rules:
 - Answer in Korean.
 - Focus on recent direction, repeated patterns, and likely drivers.
-- Treat previous-day causes and today's outcomes as paired signals within each row.
+- Interpret each outcome row as the lagged result of the previous row's input metrics.
 - Separate face/hand-foot swelling from abdominal bloating/gas.
 - Do not overclaim fat gain or fat loss from short-term weight movement.
-- Mention uncertainty clearly.
+- Mention uncertainty clearly and use probabilistic language.
 - Give practical next-step guidance.
 
 Input:
-RECENT_ROWS:
-{recent_rows}
+FIELD_ALIASES:
+{field_aliases}
+
+RECENT_LAGGED_PAIRS:
+{lagged_pairs}
 
 Output format:
 1. 최근 흐름 요약
@@ -162,23 +223,32 @@ Rules:
 - `summary_lines` must contain exactly 3 short lines suitable for a Slack main message.
 - `full_analysis` can be longer, but keep it practical and concise.
 - In `full_analysis`, focus on recent direction, repeated patterns, and likely drivers.
-- Treat previous-day causes and today's outcomes as paired signals within each row.
-- Separate face/hand-foot swelling from abdominal bloating/gas.
-- Explicitly connect the strongest previous-day causes to today's results.
+- Interpret today's outcome metrics as lagged outcomes of the previous day's input metrics.
+- Use TODAY_OUTCOMES as today's results, and LAGGED_YESTERDAY_INPUTS as the possible prior-day drivers.
+- Compare today's outcomes with recent 3-day and 7-day lagged pairs when available.
+- Separate water retention, gut content/gas, alcohol recovery load, sleep recovery, allergy/histamine, and exercise adaptation.
+- Separate face/hand-foot swelling from abdominal bloating/gas when the fields are available.
+- Explicitly connect the strongest previous-day inputs to today's results.
 - Do not overclaim fat gain or fat loss from short-term weight movement.
-- Mention uncertainty clearly.
+- Mention uncertainty clearly and use probabilistic language.
 
 Input:
-TODAY_ROW:
-{today_row}
+FIELD_ALIASES:
+{field_aliases}
 
-RECENT_ROWS:
-{recent_rows}
+TODAY_OUTCOMES:
+{today_outcomes}
+
+LAGGED_YESTERDAY_INPUTS:
+{lagged_yesterday_inputs}
+
+RECENT_LAGGED_PAIRS:
+{lagged_pairs}
 
 Output JSON schema:
 {{
   "summary_lines": ["line 1", "line 2", "line 3"],
-  "full_analysis": "markdown analysis"
+  "full_analysis": "markdown analysis with these sections: 1. 오늘 상태 요약 2. 어제 입력값이 오늘 결과에 준 가능 영향 3. 체중 변화 분해 4. 현재 추세 5. 오늘의 제안 6. 내일 예상 흐름"
 }}
 """
 
@@ -306,6 +376,35 @@ def clean_row(row: dict[str, Any] | None) -> dict[str, Any]:
     return cleaned
 
 
+def select_fields(row: dict[str, Any], fields: list[str]) -> dict[str, Any]:
+    return {field: row.get(field) for field in fields if field in row}
+
+
+def lagged_pair_from_rows(previous_row: dict[str, Any], outcome_row: dict[str, Any]) -> dict[str, Any]:
+    previous = clean_row(previous_row)
+    outcome = clean_row(outcome_row)
+    return {
+        "input_date": previous.get(DATE_COLUMN),
+        "outcome_date": outcome.get(DATE_COLUMN),
+        "lagged_inputs": select_fields(previous, LAG_INPUT_METRIC_FIELDS),
+        "outcomes": select_fields(outcome, OUTCOME_METRIC_FIELDS),
+    }
+
+
+def lagged_pairs_from_rows(rows: list[dict[str, Any]], limit: int = 14) -> list[dict[str, Any]]:
+    pairs = [
+        lagged_pair_from_rows(previous_row, outcome_row)
+        for previous_row, outcome_row in zip(rows, rows[1:])
+    ]
+    return pairs[-limit:]
+
+
+def lagged_pairs_for_prompt(df: pd.DataFrame, limit: int = 14) -> list[dict[str, Any]]:
+    sorted_df = df.sort_values(DATE_COLUMN).reset_index(drop=True)
+    rows = [clean_row(row) for row in sorted_df.to_dict(orient="records")]
+    return lagged_pairs_from_rows(rows, limit=limit)
+
+
 def get_today_row(df: pd.DataFrame, today_iso: str) -> dict[str, Any] | None:
     if df.empty:
         return None
@@ -369,9 +468,14 @@ def generate_analysis(
     if client is None:
         return "OPENAI_API_KEY가 .env에 설정되어 있지 않아 분석을 생성하지 못했습니다."
 
+    today_outcomes = select_fields(today_row, OUTCOME_METRIC_FIELDS)
+    lagged_yesterday_inputs = select_fields(yesterday_row, LAG_INPUT_METRIC_FIELDS)
+    lagged_pairs = lagged_pairs_from_rows(recent_rows)
     user_prompt = DAILY_ANALYSIS_USER_PROMPT_TEMPLATE.format(
-        today_row=json.dumps(today_row, ensure_ascii=False, indent=2),
-        yesterday_row=json.dumps(yesterday_row, ensure_ascii=False, indent=2),
+        field_aliases=json.dumps(PROMPT_FIELD_ALIASES, ensure_ascii=False, indent=2),
+        today_outcomes=json.dumps(today_outcomes, ensure_ascii=False, indent=2),
+        lagged_yesterday_inputs=json.dumps(lagged_yesterday_inputs, ensure_ascii=False, indent=2),
+        lagged_pairs=json.dumps(lagged_pairs, ensure_ascii=False, indent=2),
         recent_rows=json.dumps(recent_rows, ensure_ascii=False, indent=2),
     )
     try:
@@ -393,8 +497,10 @@ def generate_trend_analysis(recent_rows: list[dict[str, Any]]) -> str:
     if client is None:
         return "OPENAI_API_KEY가 .env에 설정되어 있지 않아 트렌드 분석을 생성하지 못했습니다."
 
+    lagged_pairs = lagged_pairs_from_rows(recent_rows)
     user_prompt = TREND_ANALYSIS_USER_PROMPT_TEMPLATE.format(
-        recent_rows=json.dumps(recent_rows, ensure_ascii=False, indent=2)
+        field_aliases=json.dumps(PROMPT_FIELD_ALIASES, ensure_ascii=False, indent=2),
+        lagged_pairs=json.dumps(lagged_pairs, ensure_ascii=False, indent=2),
     )
     try:
         response = client.responses.create(
@@ -436,6 +542,7 @@ def _fallback_summary_lines(text: str) -> list[str]:
 
 def generate_trend_report(
     today_row: dict[str, Any],
+    yesterday_row: dict[str, Any],
     recent_rows: list[dict[str, Any]],
 ) -> dict[str, Any]:
     client = openai_client()
@@ -443,9 +550,14 @@ def generate_trend_report(
         message = "OPENAI_API_KEY가 .env에 설정되어 있지 않아 트렌드 분석을 생성하지 못했습니다."
         return {"summary_lines": _fallback_summary_lines(message), "full_analysis": message}
 
+    today_outcomes = select_fields(today_row, OUTCOME_METRIC_FIELDS)
+    lagged_yesterday_inputs = select_fields(yesterday_row, LAG_INPUT_METRIC_FIELDS)
+    lagged_pairs = lagged_pairs_from_rows(recent_rows)
     user_prompt = TREND_REPORT_USER_PROMPT_TEMPLATE.format(
-        today_row=json.dumps(today_row, ensure_ascii=False, indent=2),
-        recent_rows=json.dumps(recent_rows, ensure_ascii=False, indent=2),
+        field_aliases=json.dumps(PROMPT_FIELD_ALIASES, ensure_ascii=False, indent=2),
+        today_outcomes=json.dumps(today_outcomes, ensure_ascii=False, indent=2),
+        lagged_yesterday_inputs=json.dumps(lagged_yesterday_inputs, ensure_ascii=False, indent=2),
+        lagged_pairs=json.dumps(lagged_pairs, ensure_ascii=False, indent=2),
     )
     try:
         response = client.responses.create(

@@ -269,6 +269,16 @@
     "anchor_ko": "0=매우 나쁨, 1=회복감 좋음",
     "default": 0.5
   },
+  "night_sweat_score": {
+    "label_ko": "야간 발한",
+    "type": "score",
+    "min": 0,
+    "max": 1,
+    "step": 0.1,
+    "unit": "점",
+    "anchor_ko": "0=없음, 1=강함",
+    "default": 0.0
+  },
   "fatigue_brain_fog": {
     "label_ko": "피로감 / 멍함",
     "type": "score",
@@ -278,5 +288,15 @@
     "unit": "점",
     "anchor_ko": "0=없음, 1=있음/강함",
     "default": 0.0
+  },
+  "notes": {
+    "label_ko": "메모",
+    "type": "text",
+    "min": null,
+    "max": null,
+    "step": null,
+    "unit": "",
+    "anchor_ko": "식사, 증상, 컨디션 특이사항을 짧게 적습니다.",
+    "default": ""
   }
 }

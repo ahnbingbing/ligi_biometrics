@@ -658,10 +658,10 @@ def render_result_input_page(
                 status = "OK" if ok else "FAIL"
                 st.write(f"{status} - {name}: {detail}")
 
-    prompt_today, _prompt_yesterday, prompt_recent = rows_for_prompt(updated_df, today_iso)
+    prompt_today, prompt_yesterday, prompt_recent = rows_for_prompt(updated_df, today_iso)
     with st.spinner("한국어 트렌드 분석을 생성하는 중입니다..."):
         try:
-            trend_report = generate_trend_report(prompt_today, prompt_recent)
+            trend_report = generate_trend_report(prompt_today, prompt_yesterday, prompt_recent)
         except Exception as exc:
             trend_report = {
                 "summary_lines": ["분석 생성 중 오류가 발생했습니다.", "저장된 데이터는 유지되었습니다.", str(exc)],
